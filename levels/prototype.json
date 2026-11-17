@@ -1,0 +1,345 @@
+{
+  "levels": [
+    {
+      "id": "p-01",
+      "name": "First Solvent",
+      "note": "Strike an empty spot. Matching pigments in its four lines of sight dissolve.",
+      "rows": [
+        "A...A",
+        ".....",
+        "B...B"
+      ],
+      "par": 2,
+      "metrics": {
+        "pRandom": 1,
+        "trapBits": 0,
+        "startMoves": 2,
+        "startSafe": 2,
+        "optimalSolutions": 2,
+        "states": 4
+      },
+      "ko": {
+        "name": "첫 용제",
+        "note": "빈칸을 두드리세요. 네 방향 시선 끝에 걸린 같은 안료끼리 녹아내립니다."
+      }
+    },
+    {
+      "id": "p-02",
+      "name": "The Cross",
+      "note": "One strike can lift up to four layers at once.",
+      "rows": [
+        "..A..",
+        ".....",
+        "B...B",
+        ".....",
+        "..A.."
+      ],
+      "par": 1,
+      "metrics": {
+        "pRandom": 1,
+        "trapBits": 0,
+        "startMoves": 3,
+        "startSafe": 3,
+        "optimalSolutions": 1,
+        "states": 4
+      },
+      "ko": {
+        "name": "십자",
+        "note": "한 번의 타격으로 네 겹까지 벗겨낼 수 있습니다."
+      }
+    },
+    {
+      "id": "p-03",
+      "name": "Fragment 3",
+      "note": "Every painting can be restored. Watch what each strike leaves behind.",
+      "rows": [
+        ".A..A",
+        "A.A.B",
+        ".....",
+        "..BAA"
+      ],
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.2556,
+        "trapBits": 1.97,
+        "startMoves": 5,
+        "startSafe": 2,
+        "optimalSolutions": 8,
+        "states": 24
+      },
+      "ko": {
+        "name": "조각 3",
+        "note": "모든 그림은 복원할 수 있습니다. 타격할 때마다 무엇이 남는지 살펴보세요."
+      }
+    },
+    {
+      "id": "p-04",
+      "name": "Fragment 4",
+      "note": "Two pigments. Watch what each strike leaves behind.",
+      "rows": [
+        "..AA.",
+        "B...B",
+        ".BB.A",
+        ".A..."
+      ],
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.2014,
+        "trapBits": 2.31,
+        "startMoves": 7,
+        "startSafe": 3,
+        "optimalSolutions": 14,
+        "states": 38
+      },
+      "ko": {
+        "name": "조각 4",
+        "note": "두 가지 안료. 타격할 때마다 무엇이 남는지 살펴보세요."
+      }
+    },
+    {
+      "id": "p-05",
+      "name": "Fragment 5",
+      "note": "Three pigments. Some strikes close doors.",
+      "rows": [
+        "..C.C",
+        "...CC",
+        "..CB.",
+        "CBB.A",
+        ".BA.."
+      ],
+      "par": 6,
+      "metrics": {
+        "pRandom": 0.0385,
+        "trapBits": 4.7,
+        "startMoves": 7,
+        "startSafe": 3,
+        "optimalSolutions": 71,
+        "states": 153
+      },
+      "ko": {
+        "name": "조각 5",
+        "note": "세 가지 안료. 어떤 타격은 길을 막아버립니다."
+      }
+    },
+    {
+      "id": "p-06",
+      "name": "Fragment 6",
+      "note": "Three pigments. Some strikes close doors.",
+      "rows": [
+        "AB...",
+        "A..A.",
+        "B...A",
+        "AB.C.",
+        ".C.AA"
+      ],
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0377,
+        "trapBits": 4.73,
+        "startMoves": 5,
+        "startSafe": 2,
+        "optimalSolutions": 31,
+        "states": 99
+      },
+      "ko": {
+        "name": "조각 6",
+        "note": "세 가지 안료. 어떤 타격은 길을 막아버립니다."
+      }
+    },
+    {
+      "id": "p-order",
+      "name": "Not Yet",
+      "note": "When the paint sets, the mistake is often earlier than the last strike.",
+      "rows": [
+        ".BBC.",
+        "..B..",
+        ".A.A.",
+        ".BC.C",
+        "....."
+      ],
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.037,
+        "trapBits": 4.75,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 2,
+        "states": 31
+      },
+      "ko": {
+        "name": "아직 아니야",
+        "note": "물감이 굳었다면, 실수는 대개 마지막 수보다 더 앞에 있습니다.",
+        "voice": {
+          "stuckAfterBait": "쉬운 문제부터 풀었군. 다들 그래.",
+          "winAfterBait": "같은 자리였지. 순서만 달랐을 뿐.",
+          "winClean": "안 걸렸군. 다음엔 어떨까."
+        }
+      },
+      "bait": [
+        2,
+        2
+      ],
+      "voice": {
+        "stuckAfterBait": "You went for the easy one first. Everyone does.",
+        "winAfterBait": "Same spot. Only the order was different.",
+        "winClean": "Not fooled. We will see about the next one."
+      }
+    },
+    {
+      "id": "p-07",
+      "name": "Fragment 7",
+      "note": "Gold leaf: it never lifts, and blocks the solvent.",
+      "rows": [
+        "CB..C.",
+        "....#C",
+        "BA#.A.",
+        "A....A",
+        "#..BC.",
+        "..B.CC"
+      ],
+      "par": 7,
+      "metrics": {
+        "pRandom": 0.0087,
+        "trapBits": 6.85,
+        "startMoves": 8,
+        "startSafe": 2,
+        "optimalSolutions": 28,
+        "states": 216
+      },
+      "ko": {
+        "name": "조각 7",
+        "note": "금박: 절대 벗겨지지 않고, 용제의 시선을 가로막습니다."
+      }
+    },
+    {
+      "id": "p-08",
+      "name": "Fragment 8",
+      "note": "Gold leaf: it never lifts, and blocks the solvent.",
+      "rows": [
+        "#.A.AA",
+        "C.....",
+        ".C.#B.",
+        "B.CBB.",
+        "AB..C#",
+        "...B.."
+      ],
+      "par": 7,
+      "metrics": {
+        "pRandom": 0.0079,
+        "trapBits": 6.98,
+        "startMoves": 8,
+        "startSafe": 3,
+        "optimalSolutions": 114,
+        "states": 176
+      },
+      "ko": {
+        "name": "조각 8",
+        "note": "금박: 절대 벗겨지지 않고, 용제의 시선을 가로막습니다."
+      }
+    },
+    {
+      "id": "p-09",
+      "name": "Fragment 9",
+      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "rows": [
+        "..B...",
+        "....C.",
+        "...C.a",
+        ".B.C..",
+        ".C...C",
+        "bbBBAA"
+      ],
+      "par": 7,
+      "metrics": {
+        "pRandom": 0.0042,
+        "trapBits": 7.88,
+        "startMoves": 12,
+        "startSafe": 4,
+        "optimalSolutions": 35,
+        "states": 745
+      },
+      "ko": {
+        "name": "조각 9",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
+      "id": "p-10",
+      "name": "Fragment 10",
+      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "rows": [
+        ".BC..B",
+        "Ac.C.A",
+        "...CA.",
+        ".ab...",
+        "...C..",
+        "..B.B."
+      ],
+      "par": 8,
+      "metrics": {
+        "pRandom": 0.0042,
+        "trapBits": 7.91,
+        "startMoves": 10,
+        "startSafe": 6,
+        "optimalSolutions": 5085,
+        "states": 1520
+      },
+      "ko": {
+        "name": "조각 10",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
+      "id": "p-11",
+      "name": "Fragment 11",
+      "note": "Everything together.",
+      "rows": [
+        ".AB#.A.",
+        "..CC.A.",
+        "Cb.aB.D",
+        "#......",
+        ".DDABD.",
+        "C.B...."
+      ],
+      "par": 10,
+      "metrics": {
+        "pRandom": 0.0005,
+        "trapBits": 10.92,
+        "startMoves": 5,
+        "startSafe": 2,
+        "optimalSolutions": 56,
+        "states": 144
+      },
+      "ko": {
+        "name": "조각 11",
+        "note": "지금까지의 모든 것."
+      }
+    },
+    {
+      "id": "p-12",
+      "name": "Fragment 12",
+      "note": "Everything together.",
+      "rows": [
+        "..Cd#A.",
+        "A.....A",
+        "BC.....",
+        "....C#A",
+        "DCADD.B",
+        "cDA...."
+      ],
+      "par": 10,
+      "metrics": {
+        "pRandom": 0.0005,
+        "trapBits": 10.96,
+        "startMoves": 11,
+        "startSafe": 2,
+        "optimalSolutions": 224,
+        "states": 784
+      },
+      "ko": {
+        "name": "조각 12",
+        "note": "지금까지의 모든 것."
+      }
+    }
+  ]
+}

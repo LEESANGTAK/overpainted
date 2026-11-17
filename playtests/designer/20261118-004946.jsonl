@@ -1,0 +1,8 @@
+{"t":1794930586195,"type":"session_start","lvl":null,"w":1059,"h":863}
+{"t":1794930586210,"type":"level_start","lvl":"p-order","rows":[".BBC.","..B..",".A.A.",".BC.C","....."],"par":4,"dev":false}
+{"t":1794930592324,"type":"dev","lvl":"p-order","on":true}
+{"t":1794930593944,"type":"dev","lvl":"p-order","on":false}
+{"t":1794930594327,"type":"dev","lvl":"p-order","on":true}
+{"t":1794930602191,"type":"dev","lvl":"p-order","on":false}
+{"t":1794930603724,"type":"dev","lvl":"p-order","on":true}
+{"t":1794930605581,"type":"session_end","lvl":"p-order"}

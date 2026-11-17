@@ -1,0 +1,5 @@
+{"t":1794929067214,"type":"session_start","lvl":null,"w":1059,"h":863}
+{"t":1794929067234,"type":"level_start","lvl":"p-order","rows":[".....","B..BB","..CAB","...C.","..A.A"],"par":4,"dev":false}
+{"t":1794929067750,"type":"leave","lvl":"p-order","strikes":0}
+{"t":1794929067751,"type":"level_start","lvl":"p-order","rows":[".....","B..BB","..CAB","...C.","..A.A"],"par":4,"dev":false}
+{"t":1794929631705,"type":"session_end","lvl":"p-order"}

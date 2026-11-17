@@ -1,0 +1,9 @@
+# Play-session logs are written here on every play. Testers send theirs to the designer;
+# the designer's own early sessions are archived (and committed) in playtests/designer/.
+playtests/*.jsonl
+playtests/report.json
+
+node_modules/
+.claude/settings.local.json
+.DS_Store
+Thumbs.db

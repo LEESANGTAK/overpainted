@@ -1,0 +1,13 @@
+{
+  "fitted": "2026-11-17T15:33:35.347Z",
+  "decisions": 107,
+  "weights": {
+    "closes": 2.316,
+    "rarest": 1.287,
+    "hits": -0.785,
+    "straight": -0.056,
+    "reach": -2.326,
+    "varnish": 0.654,
+    "red": -0.256
+  }
+}

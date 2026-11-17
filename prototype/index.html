@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Overpainted — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">THE OVERPAINTED <span data-i18n="brandSub">prototype</span></div>
+  <nav>
+    <button id="modePlay" class="tab active" data-i18n="play">Play</button>
+    <button id="modeEdit" class="tab" data-i18n="editor">Editor</button>
+  </nav>
+  <span id="rec" title="Recording playtest" data-i18n="rec">● REC</span>
+  <div class="keys" data-i18n="keys">Z undo · R restart · H hint · D dev</div>
+  <button id="langBtn" class="lang" data-i18n="langBtn">EN</button>
+</header>
+
+<main>
+  <aside id="levelList"></aside>
+
+  <section id="stage">
+    <div class="level-head">
+      <h1 id="levelName"></h1>
+      <p id="levelNote"></p>
+    </div>
+    <div id="boardWrap">
+      <div id="board"></div>
+      <svg id="rays"></svg>
+      <div id="overlay" hidden></div>
+    </div>
+    <div id="hud">
+      <span><span data-i18n="strikes">Strikes</span> <b id="strikes">0</b> / <span data-i18n="par">par</span> <b id="par">–</b></span>
+      <span><span data-i18n="layersLeft">Layers left</span> <b id="left">0</b></span>
+      <span id="status"></span>
+    </div>
+    <div id="controls">
+      <button id="undo" data-i18n="undo">Undo</button>
+      <button id="restart" data-i18n="restart">Restart</button>
+      <button id="hint" data-i18n="hint">Hint</button>
+    </div>
+    <p id="voice" hidden></p>
+  </section>
+
+  <aside id="side">
+    <div id="devPanel" class="panel">
+      <h2><span data-i18n="devOverlay">Dev overlay</span> <label class="switch"><input type="checkbox" id="devToggle"> <span data-i18n="show">show</span></label></h2>
+      <div id="devBody" hidden>
+        <dl id="devStats"></dl>
+        <button id="replay" data-i18n="replay">Replay optimal solution</button>
+        <label class="row"><input type="checkbox" id="hoverRays" checked> <span data-i18n="hoverRays">Hover shows lines of sight</span></label>
+      </div>
+    </div>
+
+    <div id="editPanel" class="panel" hidden>
+      <h2 data-i18n="brush">Brush</h2>
+      <div id="palette"></div>
+      <label class="row"><input type="checkbox" id="varnishBrush"> <span data-i18n="varnishBrush">Double coat (2 matches)</span></label>
+      <h2 data-i18n="size">Size</h2>
+      <div class="row">
+        <input type="number" id="editW" min="2" max="12" value="6"> ×
+        <input type="number" id="editH" min="2" max="12" value="6">
+        <button id="resize" data-i18n="resize">Resize</button>
+        <button id="clearEdit" data-i18n="clear">Clear</button>
+      </div>
+      <h2 data-i18n="level">Level</h2>
+      <input id="editName" placeholder="Name" data-i18n-ph="namePh">
+      <input id="editNote" placeholder="Note shown to the player" data-i18n-ph="notePh">
+      <div class="row">
+        <button id="analyze" class="primary" data-i18n="analyze">Analyze</button>
+        <button id="testPlay" data-i18n="testPlay">Test play</button>
+        <button id="saveLevel" data-i18n="save">Save to My levels</button>
+      </div>
+      <dl id="editStats"></dl>
+      <h2>JSON</h2>
+      <textarea id="json" spellcheck="false" rows="8"></textarea>
+      <div class="row">
+        <button id="exportJson" data-i18n="exportJson">Export</button>
+        <button id="importJson" data-i18n="importJson">Import</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
