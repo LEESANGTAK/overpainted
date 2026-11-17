@@ -11,7 +11,7 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/ja
 createServer(async (req, res) => {
   let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (path === '/api/playlog' && req.method === 'POST') return playlog(req, res);
-  if (path === '/') { res.writeHead(302, { Location: '/prototype/' }); return res.end(); }
+  if (path === '/') { res.writeHead(302, { Location: '/prototype/' + new URL(req.url, 'http://x').search }); return res.end(); }
   if (path.endsWith('/')) path += 'index.html';
   const file = normalize(join(root, path));
   if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }

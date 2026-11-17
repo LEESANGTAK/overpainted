@@ -200,3 +200,17 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
 #voice::after { content: ' — ?'; color: var(--muted); font-style: normal; font-size: 12px; }
 #voice.show { animation: voiceIn 1.6s ease-out; }
 @keyframes voiceIn { 0% { opacity: 0; transform: translateY(4px); filter: blur(2px); } 40% { opacity: 0; } 100% { opacity: 1; transform: none; filter: none; } }
+
+/* first-visit notice for testers */
+#welcome {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px;
+  background: #0b090ccc; backdrop-filter: blur(3px);
+}
+#welcome .card {
+  max-width: 520px; width: 100%; padding: 24px 28px; border-radius: 8px;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: 0 20px 60px #000a;
+}
+#welcome h2 { margin: 0 0 14px; font-weight: normal; color: var(--accent); letter-spacing: .03em; }
+#welcome ol { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; }
+#welcome .fine { color: var(--muted); font-size: 12px; margin: 0 0 18px; }
+#welcome button { width: 100%; padding: 10px; }

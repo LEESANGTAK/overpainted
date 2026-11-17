@@ -1,0 +1,6 @@
+{"t":1794930855011,"type":"session_start","lvl":null,"w":1059,"h":863}
+{"t":1794930855032,"type":"level_start","lvl":"p-01","rows":["A...A",".....","B...B"],"par":2,"dev":false}
+{"t":1794931527779,"type":"strike","lvl":"p-01","cell":5,"hits":0,"fizzle":true}
+{"t":1794931658925,"type":"away","lvl":"p-01"}
+{"t":1794931733844,"type":"back","lvl":"p-01"}
+{"t":1794931733863,"type":"session_end","lvl":"p-01"}

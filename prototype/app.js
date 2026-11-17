@@ -2,6 +2,7 @@ import { parseLevel, probe, applyHits, isClear, tilesLeft, listMoves, toRows, CO
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { t, lt, applyStatic, toggleLang } from './i18n.js';
+import { COLLECTOR_URL } from './config.js';
 let predictWeights = DEFAULT_WEIGHTS; // replaced by levels/predict-weights.json when present
 
 const $ = id => document.getElementById(id);
@@ -21,30 +22,67 @@ const store = loadStore();
 store.custom ??= [];
 store.best ??= {};
 
-// ---------- playtest log (sent to tools/serve.mjs -> playtests/<session>.jsonl) ----------
+// ---------- playtest log ----------
+// Local dev (tools/serve.mjs):   POST /api/playlog            -> playtests/<session>.jsonl
+// Hosted build (GitHub Pages):   POST config.COLLECTOR_URL    -> the designer's Google Sheet
+// The designer's own local plays never go to the collector (unless overridden for testing with
+// localStorage 'overpainted.collector'), so tester data stays clean.
 const pad2 = n => String(n).padStart(2, '0');
-const SESSION = (d => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`)(new Date());
+const SESSION = (d => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`)(new Date())
+  + '-' + Math.random().toString(36).slice(2, 6);
+const IS_LOCAL = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+const SINKS = (() => {
+  const s = [];
+  if (IS_LOCAL) s.push({ url: '/api/playlog', remote: false });
+  let remote = IS_LOCAL ? null : COLLECTOR_URL;
+  try { remote = localStorage.getItem('overpainted.collector') || remote; } catch { }
+  if (remote) s.push({ url: remote, remote: true });
+  return s;
+})();
+// who is playing: ?t=<name> in the link the designer sends (remembered), plus an anonymous browser id
+const TESTER = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('t');
+    if (q) localStorage.setItem('overpainted.tester', q.slice(0, 40));
+    let id = localStorage.getItem('overpainted.browser');
+    if (!id) { id = Math.random().toString(36).slice(2, 10); localStorage.setItem('overpainted.browser', id); }
+    return { name: localStorage.getItem('overpainted.tester') || null, browser: id };
+  } catch { return { name: null, browser: null }; }
+})();
 const logBuf = [];
 let logOk = true;
 function log(type, data = {}) {
   logBuf.push({ t: Date.now(), type, lvl: S.def?.id ?? null, ...data });
 }
+async function send(sink, events) {
+  const body = JSON.stringify({ session: SESSION, events });
+  if (!sink.remote) return (await fetch(sink.url, { method: 'POST', body, keepalive: true })).ok;
+  // Apps Script answers with a cross-origin redirect: send as a "simple" request and don't read the reply
+  await fetch(sink.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, keepalive: true });
+  return true;
+}
 async function flushLog() {
-  if (!logBuf.length) return;
+  if (!logBuf.length || !SINKS.length) return;
   const events = logBuf.splice(0);
-  try {
-    const r = await fetch('/api/playlog', { method: 'POST', body: JSON.stringify({ session: SESSION, events }), keepalive: true });
-    logOk = r.ok;
-  } catch { logOk = false; }
+  let ok = true;
+  for (const sink of SINKS) {
+    try { ok = (await send(sink, events)) && ok; } catch { ok = false; }
+  }
+  if (!ok && events.length < 5000) logBuf.unshift(...events); // keep them for the next try
+  logOk = ok;
   const rec = document.getElementById('rec');
-  if (rec) { rec.classList.toggle('off', !logOk); rec.title = logOk ? `Recording playtest ${SESSION}` : 'Playtest log not saving (server offline?)'; }
+  if (rec) { rec.classList.toggle('off', !logOk); rec.title = logOk ? `Recording playtest ${SESSION}` : 'Playtest log not saving (offline?)'; }
 }
 setInterval(flushLog, 2000);
 addEventListener('pagehide', () => {
   log('session_end');
-  navigator.sendBeacon?.('/api/playlog', JSON.stringify({ session: SESSION, events: logBuf.splice(0) }));
+  const body = JSON.stringify({ session: SESSION, events: logBuf.splice(0) });
+  for (const sink of SINKS) navigator.sendBeacon?.(sink.url, new Blob([body], { type: 'text/plain;charset=utf-8' }));
 });
-document.addEventListener('visibilitychange', () => log(document.hidden ? 'away' : 'back'));
+document.addEventListener('visibilitychange', () => {
+  log(document.hidden ? 'away' : 'back');
+  if (document.hidden) flushLog(); // tabs that get closed or frozen right after this still deliver
+});
 
 // ---------- state ----------
 const S = {
@@ -343,6 +381,26 @@ function win() {
   updateHud(); renderList();
 }
 
+// First visit of a tester: what to do, and that play records are collected.
+function welcome() {
+  try { if (localStorage.getItem('overpainted.welcomed')) return; } catch { }
+  const el = document.createElement('div');
+  el.id = 'welcome';
+  el.innerHTML = `<div class="card">
+    <h2>${t('wTitle')}</h2>
+    <ol>${['w1', 'w2', 'w3', 'w4'].map(k => `<li>${t(k)}</li>`).join('')}</ol>
+    <p class="fine">${t('wData')}${TESTER.name ? ' ' + t('wName', { name: escapeHtml(TESTER.name) }) : ''}</p>
+    <button class="primary" id="wStart">${t('wStart')}</button>
+  </div>`;
+  document.body.append(el);
+  log('welcome_shown');
+  $('wStart').onclick = () => {
+    try { localStorage.setItem('overpainted.welcomed', '1'); } catch { }
+    log('welcome_ok');
+    el.remove();
+  };
+}
+
 // The overpainter speaks: one line per trigger per visit, from the level's `voice` (see levels file).
 function say(trigger) {
   const line = lt(S.def, 'voice')?.[trigger];
@@ -584,7 +642,9 @@ async function main() {
   applyStatic();
   wire();
   $('langBtn').onclick = toggleLang;
-  log('session_start', { w: innerWidth, h: innerHeight });
+  log('session_start', { w: innerWidth, h: innerHeight, tester: TESTER.name, browser: TESTER.browser, lang: document.documentElement.lang, hosted: !IS_LOCAL });
+  if (!IS_LOCAL) $('modeEdit').hidden = true; // testers only play
+  if (SINKS.some(s => s.remote)) welcome();
   try { const pw = await fetch('../levels/predict-weights.json').then(r => r.ok ? r.json() : null); if (pw) predictWeights = { ...DEFAULT_WEIGHTS, ...pw.weights }; } catch { }
   const data = await fetch('../levels/prototype.json').then(r => r.json());
   S.levels = data.levels;

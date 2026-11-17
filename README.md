@@ -4,6 +4,11 @@
 개발 과정과 결정의 이유는 [개발 일지](docs/devlog.md)에 있습니다.
 
 ## 플레이 테스트 해주시는 분께
+**https://leesangtak.github.io/overpainted/** 를 열고 플레이한 다음, 탭을 닫으면 끝입니다. 기록은 자동으로 전송됩니다.
+(디자이너용 셋업: [docs/playtest-setup.md](docs/playtest-setup.md))
+
+<details><summary>링크 대신 직접 받아서 실행하는 방법</summary>
+
 1. [Node.js](https://nodejs.org) **20.11 이상**을 설치합니다 (설치 외에 추가 패키지는 필요 없습니다).
 2. 받아서 실행합니다.
    ```
@@ -16,6 +21,8 @@
    - 힌트(H)와 개발자 오버레이(D)는 되도록 쓰지 말아 주세요.
    - 클리어 화면의 체감 난이도 / "아하!" 순간 / 재미 버튼을 눌러 주세요.
 4. 다 하셨으면 `playtests/` 폴더에 생긴 `.jsonl` 파일을 보내 주세요. 수를 둔 기록만 있고 개인정보는 없습니다.
+
+</details>
 
 ## 실행
 ```
