@@ -27,8 +27,9 @@ const STR = {
     w2: '막히면 그만두거나 다음 그림으로 넘어가도 괜찮습니다. 그것도 소중한 기록입니다.',
     w3: '힌트는 되도록 쓰지 말아 주세요. 그림을 복원하면 나오는 세 가지 질문에 답해 주세요.',
     w4: '다 하셨으면 이 탭을 닫기만 하면 됩니다. 따로 보내실 것은 없습니다.',
-    wData: '플레이 기록(어디를 언제 두드렸는지, 되돌리기, 평가)이 개발자에게 자동으로 전송됩니다. 그 밖의 개인정보는 수집하지 않습니다.',
-    wName: '이 링크에는 테스터 이름 "{name}"이(가) 붙어 있어 기록과 함께 저장됩니다.',
+    wData: '입력하신 이름과 플레이 기록(어디를 언제 두드렸는지, 되돌리기, 평가)이 개발자에게 자동으로 전송됩니다. 그 밖의 개인정보는 수집하지 않습니다.',
+    wNameLabel: '이름 또는 별명',
+    wNamePh: '예: 민수',
     wStart: '시작하기',
   },
   en: {
@@ -55,8 +56,9 @@ const STR = {
     w2: 'If you get stuck, it is fine to stop or skip ahead. That is useful too.',
     w3: 'Please avoid hints. When a painting is restored, answer the three quick questions.',
     w4: 'When you are done, just close this tab. Nothing to send.',
-    wData: 'Your play (where and when you struck, undos, ratings) is sent to the developer automatically. No other personal details are collected.',
-    wName: 'This link carries the tester name "{name}", which is stored with the records.',
+    wData: 'The name you enter and your play (where and when you struck, undos, ratings) are sent to the developer automatically. No other personal details are collected.',
+    wNameLabel: 'Name or nickname',
+    wNamePh: 'e.g. Alex',
     wStart: 'Start',
   },
 };

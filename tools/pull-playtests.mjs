@@ -35,8 +35,9 @@ for (const [session, evs] of sessions) {
   const list = [...evs.values()].sort((a, b) => a.t - b.t);
   events += list.length;
   writeFileSync(join(dir, session + '.jsonl'), list.map(e => JSON.stringify(e)).join('\n') + '\n');
-  const start = list.find(e => e.type === 'session_start');
-  rows.push({ session, tester: start?.tester ?? '–', strikes: list.filter(e => e.type === 'strike').length, wins: list.filter(e => e.type === 'win').length, last: list.at(-1)?.lvl ?? '–' });
+  // the name typed on the welcome screen ('tester' event) wins over one remembered from an earlier visit
+  const tester = list.findLast(e => e.type === 'tester')?.tester ?? list.find(e => e.type === 'session_start')?.tester;
+  rows.push({ session, tester: tester ?? '–', strikes: list.filter(e => e.type === 'strike').length, wins: list.filter(e => e.type === 'win').length, last: list.at(-1)?.lvl ?? '–' });
 }
 console.log(`Pulled ${sessions.size} session(s), ${events} events into playtests/\n`);
 for (const r of rows) console.log(`  ${r.session.padEnd(26)} tester ${String(r.tester).padEnd(12)} strikes ${String(r.strikes).padStart(4)}  cleared ${String(r.wins).padStart(3)}  last ${r.last}`);

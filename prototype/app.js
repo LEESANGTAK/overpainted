@@ -381,24 +381,41 @@ function win() {
   updateHud(); renderList();
 }
 
-// First visit of a tester: what to do, and that play records are collected.
+// First visit of a tester: what to do, what is recorded, and who is playing (name asked here,
+// remembered in this browser; a ?t= link only pre-fills it).
 function welcome() {
-  try { if (localStorage.getItem('overpainted.welcomed')) return; } catch { }
+  try { if (localStorage.getItem('overpainted.welcomed') && TESTER.name) { showTester(); return; } } catch { }
   const el = document.createElement('div');
   el.id = 'welcome';
-  el.innerHTML = `<div class="card">
+  el.innerHTML = `<form class="card" autocomplete="off">
     <h2>${t('wTitle')}</h2>
     <ol>${['w1', 'w2', 'w3', 'w4'].map(k => `<li>${t(k)}</li>`).join('')}</ol>
-    <p class="fine">${t('wData')}${TESTER.name ? ' ' + t('wName', { name: escapeHtml(TESTER.name) }) : ''}</p>
-    <button class="primary" id="wStart">${t('wStart')}</button>
-  </div>`;
+    <label class="name">${t('wNameLabel')}
+      <input id="wName" maxlength="40" required placeholder="${t('wNamePh')}" value="${escapeHtml(TESTER.name ?? '')}">
+    </label>
+    <p class="fine">${t('wData')}</p>
+    <button class="primary" id="wStart" type="submit">${t('wStart')}</button>
+  </form>`;
   document.body.append(el);
   log('welcome_shown');
-  $('wStart').onclick = () => {
-    try { localStorage.setItem('overpainted.welcomed', '1'); } catch { }
-    log('welcome_ok');
+  const input = $('wName');
+  const sync = () => { $('wStart').disabled = !input.value.trim(); };
+  input.oninput = sync; sync();
+  setTimeout(() => input.focus(), 50);
+  el.querySelector('form').onsubmit = e => {
+    e.preventDefault();
+    const name = input.value.trim().slice(0, 40);
+    if (!name) return;
+    TESTER.name = name;
+    try { localStorage.setItem('overpainted.tester', name); localStorage.setItem('overpainted.welcomed', '1'); } catch { }
+    log('tester', { tester: name });
     el.remove();
+    showTester();
   };
+}
+function showTester() {
+  const rec = $('rec');
+  if (rec && TESTER.name) rec.textContent = `${t('rec')} · ${TESTER.name}`;
 }
 
 // The overpainter speaks: one line per trigger per visit, from the level's `voice` (see levels file).
