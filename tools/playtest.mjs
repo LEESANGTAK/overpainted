@@ -28,9 +28,9 @@ const order = [...shipped.keys()];
 
 // ---------- solver cache: remaining optimal strikes from a position (Infinity = lost) ----------
 const boards = new Map();
-function boardFor(id, rows) {
-  const key = id + '|' + rows.join('/');
-  if (!boards.has(key)) boards.set(key, { board: parseLevel({ rows }), f: new Map() });
+function boardFor(id, rows, under = null) {
+  const key = id + '|' + rows.join('/') + '|' + (under ?? []).join('/');
+  if (!boards.has(key)) boards.set(key, { board: parseLevel({ rows, under }), f: new Map() });
   return boards.get(key);
 }
 function remaining(B, hp) {
@@ -78,8 +78,8 @@ for (const file of files) {
     if (e.type === 'dev') { dev = e.on; if (cur && dev) cur.L.devUsed = true; continue; }
     if (e.type === 'level_start') {
       const def = shipped.get(e.lvl) ?? { id: e.lvl, name: e.lvl, rows: e.rows, par: e.par };
-      const rows = shipped.get(e.lvl)?.rows ?? e.rows;
-      const B = boardFor(e.lvl, rows);
+      const src = shipped.get(e.lvl) ?? e;
+      const B = boardFor(e.lvl, src.rows, src.under);
       const L = agg(e.lvl, def);
       L.visits++;
       if (dev || e.dev) L.devUsed = true;

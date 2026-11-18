@@ -1,6 +1,6 @@
 // Rules + solver checks.   node tools/test.mjs
 import assert from 'node:assert/strict';
-import { parseLevel, probe, listMoves, applyHits, isClear, toRows } from '../core/rules.js';
+import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder } from '../core/rules.js';
 import { analyze } from '../core/solver.js';
 
 let n = 0;
@@ -44,6 +44,28 @@ test('varnish needs two matches', () => {
   assert.ok(isClear(hp));
 });
 
+test('undercoat: a C coat over an A coat matches as C, then as A', () => {
+  //  c . C        top coat C pairs with the C on the right;
+  //  . . .        what is left is an A tile, which pairs with the A below.
+  //  A . .
+  const b = parseLevel({ rows: ['c.C', '...', 'A..'], under: ['A..', '...', '...'] });
+  assert.deepEqual(toUnder(b), ['A..', '...', '...']);
+  assert.deepEqual(probe(b, b.initHp, at(b, 0, 1)).hits, [], 'C on top does not pair with the A below');
+  let hp = applyHits(b.initHp, probe(b, b.initHp, at(b, 1, 0)).hits);
+  assert.deepEqual(toRows(b, hp), ['A..', '...', 'A..'], 'the coat beneath shows as A');
+  assert.equal(toUnder(b, hp), null);
+  hp = applyHits(hp, probe(b, hp, at(b, 0, 1)).hits);
+  assert.ok(isClear(hp));
+  assert.equal(analyze(b).minStrikes, 2);
+});
+
+test('undercoat on an uppercase tile still makes it two coats', () => {
+  const b = parseLevel({ rows: ['C'], under: ['A'] });
+  assert.equal(b.initHp[0], 2);
+  assert.throws(() => parseLevel({ rows: ['C'], under: ['Z'] }));
+  assert.throws(() => parseLevel({ rows: ['C', '.'], under: ['A'] }));
+});
+
 // Reference solver built only on the public rules API, to cross-check the fast one.
 function slowSolve(b) {
   const memo = new Map();
@@ -72,13 +94,17 @@ test('fast solver agrees with reference on random boards', () => {
   const rnd = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
   for (let i = 0; i < 150; i++) {
     const w = 3 + Math.floor(rnd() * 3), h = 3 + Math.floor(rnd() * 3);
-    const rows = [];
+    const rows = [], under = [];
     for (let y = 0; y < h; y++) {
-      let r = '';
-      for (let x = 0; x < w; x++) { const v = rnd(); r += v < 0.45 ? '.' : v < 0.5 ? '#' : v < 0.55 ? 'a' : 'ABC'[Math.floor(rnd() * 3)]; }
-      rows.push(r);
+      let r = '', u = '';
+      for (let x = 0; x < w; x++) {
+        const v = rnd();
+        r += v < 0.45 ? '.' : v < 0.5 ? '#' : v < 0.6 ? 'abc'[Math.floor(rnd() * 3)] : 'ABC'[Math.floor(rnd() * 3)];
+        u += v >= 0.5 && v < 0.6 && rnd() < 0.6 ? 'ABC'[Math.floor(rnd() * 3)] : '.';
+      }
+      rows.push(r); under.push(u);
     }
-    const b = parseLevel({ rows });
+    const b = parseLevel({ rows, under });
     const fast = analyze(b), slow = slowSolve(b);
     assert.equal(fast.solvable, slow.f < Infinity, rows.join('/'));
     if (fast.solvable) assert.equal(fast.minStrikes, slow.f, rows.join('/'));

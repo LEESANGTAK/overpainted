@@ -58,9 +58,9 @@ for (const f of files) {
   let cur = null;
   for (const e of evs) {
     if (e.type === 'level_start') {
-      const rows = byId.get(e.lvl)?.rows ?? e.rows;
-      if (!rows) { cur = null; continue; }
-      const board = parseLevel({ id: e.lvl, rows });
+      const src = byId.get(e.lvl) ?? e;
+      if (!src.rows) { cur = null; continue; }
+      const board = parseLevel({ id: e.lvl, rows: src.rows, under: src.under });
       cur = { id: e.lvl, board, hp: board.initHp.slice(), hist: [] };
       continue;
     }

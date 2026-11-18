@@ -35,7 +35,8 @@ function buildRays(board) {
 
 /** Fast distinct-move enumeration for the solver. Returns [{cell, hits:number[]}]. */
 function movesFast(board, rays, hp) {
-  const { tileAt, blocked, tileColor } = board;
+  const { tileAt, blocked, tileColor, underColor } = board;
+  const col = t => (hp[t] >= 2 ? tileColor[t] : underColor[t]);
   const N = board.w * board.h;
   const out = new Map();
   const found = [-1, -1, -1, -1];
@@ -60,9 +61,9 @@ function movesFast(board, rays, hp) {
     for (let i = 0; i < 4; i++) {
       const t = found[i];
       if (t < 0) continue;
-      const col = tileColor[t];
+      const ct = col(t);
       let k = 0;
-      for (let j = 0; j < 4; j++) if (found[j] >= 0 && tileColor[found[j]] === col) k++;
+      for (let j = 0; j < 4; j++) if (found[j] >= 0 && col(found[j]) === ct) k++;
       if (k >= 2) hits.push(t);
     }
     if (hits.length < 2) continue;

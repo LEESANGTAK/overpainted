@@ -3,8 +3,12 @@
 // Level text format (one string per row):
 //   .        empty cell (part of the revealed original painting)
 //   A..F     paint tile of pigment A..F (1 layer)
-//   a..f     varnished tile of pigment A..F (2 layers: first match only strips the varnish)
+//   a..f     double coat of pigment A..F (2 layers: the first match only lifts the top coat)
 //   #        gold leaf: never removed, blocks the line of sight
+//
+// Optional `under` rows (same size): a letter under a double coat gives the coat beneath a
+// different pigment. "c" in rows + "A" in under = a C coat over an A coat. Once the top coat
+// is lifted the tile is an ordinary A tile. The undercoat is shown from the start.
 //
 // A strike targets an EMPTY cell. From it, look up/right/down/left and take the nearest
 // non-empty cell in each direction (gold leaf stops the look and yields nothing).
@@ -22,7 +26,9 @@ export function parseLevel(def) {
   const w = Math.max(...rows.map(r => r.length));
   const tileAt = new Int32Array(w * h).fill(-1);
   const blocked = new Uint8Array(w * h);
-  const tileCell = [], tileColor = [], initHp = [];
+  const under = def.under;
+  if (under != null && (!Array.isArray(under) || under.length !== h)) throw new Error('`under` must have one row per row');
+  const tileCell = [], tileColor = [], underColor = [], initHp = [];
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const ch = rows[y][x] ?? '.';
@@ -35,8 +41,12 @@ export function parseLevel(def) {
         if (k < 0) throw new Error(`Unknown char '${ch}' at ${x},${y}`);
         tileAt[c] = tileCell.length;
         tileCell.push(c);
+        const uch = under?.[y]?.[x] ?? '.';
+        const ku = uch === '.' || uch === ' ' ? -1 : COLOR_CHARS.indexOf(uch.toUpperCase());
+        if (uch !== '.' && uch !== ' ' && ku < 0) throw new Error(`Unknown undercoat '${uch}' at ${x},${y}`);
         tileColor.push(k);
-        initHp.push(ch === up ? 1 : 2);
+        underColor.push(ku >= 0 ? ku : k);
+        initHp.push(ch === up && ku < 0 ? 1 : 2);
       }
     }
   }
@@ -44,10 +54,21 @@ export function parseLevel(def) {
     id: def.id, name: def.name ?? def.id ?? 'untitled', note: def.note ?? '', par: def.par,
     w, h, tileAt, blocked,
     tileCell: Int32Array.from(tileCell),
-    tileColor: Uint8Array.from(tileColor),
+    tileColor: Uint8Array.from(tileColor),   // pigment of the top coat (the only coat for single tiles)
+    underColor: Uint8Array.from(underColor), // pigment once the top coat is gone (= tileColor unless undercoated)
     initHp: Uint8Array.from(initHp),
     nTiles: tileCell.length,
   };
+}
+
+/** Pigment index tile t shows in state hp. */
+export function colorOf(board, hp, t) {
+  return hp[t] >= 2 ? board.tileColor[t] : board.underColor[t];
+}
+
+/** True if tile t still has a top coat whose pigment differs from the coat beneath. */
+export function hasUndercoat(board, hp, t) {
+  return hp[t] >= 2 && board.underColor[t] !== board.tileColor[t];
 }
 
 /** Rows (string[]) for the board in the given state. */
@@ -60,12 +81,28 @@ export function toRows(board, hp = board.initHp) {
       if (board.blocked[c]) { s += '#'; continue; }
       const t = board.tileAt[c];
       if (t < 0 || hp[t] === 0) { s += '.'; continue; }
-      const ch = COLOR_CHARS[board.tileColor[t]];
+      const ch = COLOR_CHARS[colorOf(board, hp, t)];
       s += hp[t] >= 2 ? ch.toLowerCase() : ch;
     }
     rows.push(s);
   }
   return rows;
+}
+
+/** `under` rows for the board in the given state, or null if no tile has a different undercoat. */
+export function toUnder(board, hp = board.initHp) {
+  let any = false;
+  const rows = [];
+  for (let y = 0; y < board.h; y++) {
+    let s = '';
+    for (let x = 0; x < board.w; x++) {
+      const t = board.tileAt[y * board.w + x];
+      if (t >= 0 && hasUndercoat(board, hp, t)) { s += COLOR_CHARS[board.underColor[t]]; any = true; }
+      else s += '.';
+    }
+    rows.push(s);
+  }
+  return any ? rows : null;
 }
 
 export function isEmpty(board, hp, c) {
@@ -103,7 +140,7 @@ export function probe(board, hp, cell) {
     let n = 0;
     for (let j = 0; j < 4; j++) {
       const u = rays[j].tile;
-      if (u >= 0 && board.tileColor[u] === board.tileColor[t]) n++;
+      if (u >= 0 && colorOf(board, hp, u) === colorOf(board, hp, t)) n++;
     }
     if (n >= 2) hits.push(t);
   }

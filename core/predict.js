@@ -4,7 +4,7 @@
 // Model: conditional logit. Each move gets a score w·f (features below); the probability of a
 // move is softmax(score) over all moves available in the position. Weights start from the
 // hypotheses we have and are refit from playtest logs with tools/predict.mjs --calibrate.
-import { listMoves, probe, applyHits } from './rules.js';
+import { listMoves, probe, applyHits, colorOf } from './rules.js';
 
 export const FEATURES = [
   // "solve the easy question first": the strike lifts every remaining tile of a pigment
@@ -25,7 +25,7 @@ export const DEFAULT_WEIGHTS = { closes: 2.0, rarest: 1.0, hits: 0.6, straight: 
 /** Remaining tile count per pigment. */
 function countsByColor(board, hp) {
   const n = new Array(6).fill(0);
-  for (let t = 0; t < hp.length; t++) if (hp[t] > 0) n[board.tileColor[t]]++;
+  for (let t = 0; t < hp.length; t++) if (hp[t] > 0) n[colorOf(board, hp, t)]++;
   return n;
 }
 
@@ -33,11 +33,11 @@ function countsByColor(board, hp) {
 export function moveFeatures(board, hp, move, counts = countsByColor(board, hp)) {
   const { w, h } = board;
   const after = applyHits(hp, move.hits);
-  const colors = [...new Set(move.hits.map(t => board.tileColor[t]))];
+  const colors = [...new Set(move.hits.map(t => colorOf(board, hp, t)))];
   let closes = 0;
   for (const k of colors) {
     let left = 0;
-    for (let t = 0; t < after.length; t++) if (after[t] > 0 && board.tileColor[t] === k) left++;
+    for (let t = 0; t < after.length; t++) if (after[t] > 0 && colorOf(board, after, t) === k) left++;
     if (left === 0) closes = 1;
   }
   const present = counts.filter(n => n > 0);
