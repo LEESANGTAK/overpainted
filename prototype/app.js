@@ -146,13 +146,10 @@ function boardShown() {
 
 function fitSize(w, h) {
   const stage = $('stage');
-  const mobile = window.innerWidth <= 860;
-  const aw = mobile
-    ? Math.min(stage.clientWidth || window.innerWidth, window.innerWidth) - 44
-    : stage.clientWidth - 80;
-  const ah = mobile
-    ? Math.max(180, window.innerHeight - 250)
-    : window.innerHeight - 290;
+  const mobile = window.innerWidth <= 1100 || window.matchMedia('(pointer: coarse), (hover: none)').matches;
+  const stageW = stage.clientWidth > 200 ? Math.min(stage.clientWidth, window.innerWidth) : window.innerWidth;
+  const aw = mobile ? stageW - 36 : stage.clientWidth - 80;
+  const ah = mobile ? Math.max(220, window.innerHeight - 240) : window.innerHeight - 290;
   const maxFit = Math.floor(Math.min(aw / w, ah / h));
   return Math.max(Math.min(26, Math.floor(aw / w)), Math.min(72, maxFit));
 }
@@ -678,7 +675,10 @@ function wire() {
     else if (k === 'h') hint();
     else if (k === 'd') { $('devToggle').checked = !S.dev; $('devToggle').onchange({ target: $('devToggle') }); }
   });
-  window.addEventListener('resize', () => { if (S.def || S.mode === 'edit') renderBoard(); });
+  const onResize = () => { if (S.def || S.mode === 'edit') renderBoard(); };
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', () => { onResize(); setTimeout(onResize, 120); });
+  window.visualViewport?.addEventListener('resize', onResize);
 }
 
 async function main() {
