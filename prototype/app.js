@@ -146,8 +146,15 @@ function boardShown() {
 
 function fitSize(w, h) {
   const stage = $('stage');
-  const aw = stage.clientWidth - 80, ah = window.innerHeight - 290;
-  return Math.max(26, Math.min(72, Math.floor(Math.min(aw / w, ah / h))));
+  const mobile = window.innerWidth <= 860;
+  const aw = mobile
+    ? Math.min(stage.clientWidth || window.innerWidth, window.innerWidth) - 44
+    : stage.clientWidth - 80;
+  const ah = mobile
+    ? Math.max(180, window.innerHeight - 250)
+    : window.innerHeight - 290;
+  const maxFit = Math.floor(Math.min(aw / w, ah / h));
+  return Math.max(Math.min(26, Math.floor(aw / w)), Math.min(72, maxFit));
 }
 
 function tileHtml(k, varnish) {
@@ -216,6 +223,7 @@ function renderList() {
   };
   el.innerHTML = `<h3>${t('listProto')}</h3>` + S.levels.map(d => item(d, false)).join('') +
     `<h3>${t('listMine')}</h3>` + (store.custom.length ? store.custom.map(d => item(d, true)).join('') : `<small style="color:var(--muted)">${t('makeOne')}</small>`);
+  el.querySelector('.lvl.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -582,12 +590,30 @@ function wire() {
     if (!cell) return;
     const c = +cell.dataset.c;
     if (S.mode === 'edit') { if (S.edit.painting) paintCell(c); return; }
+    if (!window.matchMedia('(hover: hover)').matches) return;
     if (S.busy || S.won || !$('hoverRays').checked) return;
     const r = probe(S.board, S.hp, c);
     if (r) drawRays(c, r.rays, r.hits, 'hover'); else clearRays();
   });
+  board.addEventListener('touchstart', e => {
+    if (S.mode !== 'edit' || e.touches.length !== 1) return;
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    S.edit.painting = true;
+    paintCell(+cell.dataset.c);
+    e.preventDefault();
+  }, { passive: false });
+  board.addEventListener('touchmove', e => {
+    if (S.mode !== 'edit' || !S.edit.painting || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const cell = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.cell');
+    if (cell && board.contains(cell)) paintCell(+cell.dataset.c);
+    e.preventDefault();
+  }, { passive: false });
   board.addEventListener('mouseleave', () => { if (!S.busy) clearRays(); });
   window.addEventListener('mouseup', () => { S.edit.painting = false; });
+  window.addEventListener('touchend', () => { S.edit.painting = false; });
+  window.addEventListener('touchcancel', () => { S.edit.painting = false; });
 
   $('levelList').addEventListener('click', e => {
     const btn = e.target.closest('.lvl');
