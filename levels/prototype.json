@@ -186,6 +186,45 @@
       }
     },
     {
+      "id": "p-reach",
+      "name": "All the Way",
+      "note": "Clear a layer, and the line of sight runs further.",
+      "rows": [
+        "BC...",
+        ".B...",
+        "..A..",
+        "AC...",
+        "..A.."
+      ],
+      "ko": {
+        "name": "끝까지",
+        "note": "지운 자리 너머로, 시선은 더 멀리 닿습니다.",
+        "voice": {
+          "stuckAfterBait": "세 번째가 안 보였지. 아직은.",
+          "winAfterBait": "같은 자리. 이번엔 끝까지 닿았군.",
+          "winClean": "치워야 보이는 것도 있지."
+        }
+      },
+      "bait": [
+        2,
+        3
+      ],
+      "voice": {
+        "stuckAfterBait": "You could not see the third one. Not yet.",
+        "winAfterBait": "Same spot. This time it reached all the way.",
+        "winClean": "Some things only show once the way is clear."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.0208,
+        "trapBits": 5.58,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 13
+      }
+    },
+    {
       "id": "p-07",
       "name": "Fragment 7",
       "note": "Gold leaf: it never lifts, and blocks the solvent.",
@@ -261,6 +300,30 @@
       "ko": {
         "name": "조각 9",
         "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
+      "id": "p-coat",
+      "name": "One Coat Left",
+      "note": "It lost a coat. It did not lose its place.",
+      "rows": [
+        "C.BB.",
+        ".CAB.",
+        "..c..",
+        "A.B.."
+      ],
+      "ko": {
+        "name": "한 겹 남았다",
+        "note": "한 겹을 잃었을 뿐, 자리를 잃은 건 아니다."
+      },
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0278,
+        "trapBits": 5.17,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 2,
+        "states": 24
       }
     },
     {
