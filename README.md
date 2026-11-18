@@ -25,6 +25,8 @@
 </details>
 
 ## 실행
+Windows에서는 **`play.bat`을 더블클릭**하면 서버가 켜지고 브라우저에 게임이 열립니다 (창을 닫으면 꺼짐).
+
 ```
 node tools/serve.mjs        # http://localhost:5173/prototype/
 node tools/test.mjs         # 규칙/솔버 테스트
