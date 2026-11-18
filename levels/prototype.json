@@ -327,6 +327,68 @@
       }
     },
     {
+      "id": "p-under",
+      "name": "Underneath",
+      "note": "Some paint was laid over other paint. The coat beneath shows at the corner.",
+      "rows": [
+        ".AbA.",
+        "....A",
+        "..C.C",
+        "B...."
+      ],
+      "under": [
+        "..A..",
+        ".....",
+        ".....",
+        "....."
+      ],
+      "ko": {
+        "name": "밑칠",
+        "note": "어떤 물감은 다른 물감 위에 칠해졌습니다. 아래 겹의 색은 모서리에 보입니다."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.037,
+        "trapBits": 4.75,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 12
+      }
+    },
+    {
+      "id": "p-peel",
+      "name": "Peel Together",
+      "note": "When a top coat goes, the tile takes the colour beneath.",
+      "rows": [
+        "A.B.A",
+        "..C.c",
+        "..A.B",
+        "..B..",
+        "...Cc"
+      ],
+      "under": [
+        ".....",
+        "....A",
+        ".....",
+        ".....",
+        "....B"
+      ],
+      "ko": {
+        "name": "함께 벗기기",
+        "note": "윗겹이 벗겨지면, 그 자리는 아래 겹의 색이 됩니다."
+      },
+      "par": 6,
+      "metrics": {
+        "pRandom": 0.0617,
+        "trapBits": 4.02,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 3,
+        "states": 31
+      }
+    },
+    {
       "id": "p-10",
       "name": "Fragment 10",
       "note": "Double coat: it takes two matches. The first only lifts the top coat.",
