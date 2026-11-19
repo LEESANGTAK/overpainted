@@ -62,6 +62,14 @@ aside { overflow-y: auto; padding: 14px; background: var(--panel); }
 .lvl.active { background: var(--panel-2); border-color: var(--accent); }
 .lvl small { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .lvl .stars { color: var(--accent); }
+/* Extra levels: optional side branches, set apart in darker wood with a dashed edge */
+.lvl.extra { margin-left: 14px; width: calc(100% - 14px); background: #2a1d10; border-style: dashed; border-color: #6b4a25; }
+.lvl.extra.active { background: #3a2814; border-color: var(--accent); border-style: solid; }
+.lvl.extra span { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; } /* tag above the name in the sidebar */
+.lvl .tag { font-style: normal; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: #c9974e; border: 1px solid #6b4a25; border-radius: 3px; padding: 0 4px; margin-right: 6px; vertical-align: 1px; align-self: flex-start; }
+.lvl.locked { opacity: .45; cursor: not-allowed; }
+#overlay button.extra { background: #2a1d10; border: 1px dashed #c9974e; color: #e3b46a; }
+#overlay button.extra.primary { border-style: solid; }
 
 #stage { display: flex; flex-direction: column; align-items: center; padding: 18px; min-width: 0; overflow: auto; }
 .level-head { text-align: center; max-width: 560px; }
@@ -253,6 +261,8 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
   #levelList h3:first-child { margin-left: 0; }
   #levelList > small { flex-shrink: 0; }
   .lvl { width: auto; flex-shrink: 0; margin-bottom: 0; padding: 5px 10px; gap: 6px; font-size: 13px; }
+  .lvl.extra { margin-left: 0; width: auto; }
+  .lvl.extra span { display: inline; }
 
   #stage { padding: 12px 10px 16px; width: 100%; overflow: visible; }
   .level-head h1 { font-size: 19px; margin-bottom: 2px; }

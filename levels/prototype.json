@@ -303,7 +303,8 @@
         "stuckAfterBait": "One strike saved. One tile left over.",
         "winAfterBait": "Same spot. Once it had done its guarding.",
         "winClean": "You let it stand guard first."
-      }
+      },
+      "par": 4
     },
     {
       "id": "p-09",
@@ -444,8 +445,77 @@
       }
     },
     {
+      "id": "p-chain",
+      "name": "Chain",
+      "note": "Clear one thing, and the next way opens.",
+      "rows": [
+        "B.C..",
+        ".B...",
+        "AC..A",
+        "B..A.",
+        "C.C.."
+      ],
+      "ko": {
+        "name": "사슬",
+        "note": "하나를 치우면, 다음 길이 열립니다.",
+        "voice": {
+          "stuckAfterBait": "셋 중 둘. 세 번째는 다른 것들 뒤에서 기다리고 있었지.",
+          "winAfterBait": "하나가 다음 길을 열고, 그게 또 다음 길을 열지.",
+          "winClean": "사슬 전체를 봤군."
+        }
+      },
+      "bait": [
+        1,
+        0
+      ],
+      "voice": {
+        "stuckAfterBait": "Two of three. The third was waiting behind the others.",
+        "winAfterBait": "Each one opened the way for the next.",
+        "winClean": "You saw the whole chain."
+      },
+      "par": 4
+    },
+    {
+      "id": "p-third",
+      "name": "The Third Beneath",
+      "note": "Peel in the right order.",
+      "rows": [
+        "...B.",
+        ".A...",
+        ".cA.C",
+        ".CA..",
+        "A..bC"
+      ],
+      "under": [
+        ".....",
+        ".....",
+        ".B...",
+        ".....",
+        "...A."
+      ],
+      "ko": {
+        "name": "세 번째는 아래에",
+        "note": "벗기는 데에도 순서가 있습니다.",
+        "voice": {
+          "stuckAfterBait": "파랑은 파랑끼리. 노랑 밑의 하나를 잊었군.",
+          "winAfterBait": "같은 자리. 이번엔 파랑 셋이 대답했지.",
+          "winClean": "밑에 있는 것까지 셌군."
+        }
+      },
+      "bait": [
+        3,
+        2
+      ],
+      "voice": {
+        "stuckAfterBait": "Blue with blue. You forgot the one under the yellow.",
+        "winAfterBait": "Same spot. This time three blues answered.",
+        "winClean": "You counted what lay beneath."
+      },
+      "par": 5
+    },
+    {
       "id": "p-11",
-      "name": "Fragment 11",
+      "name": "Large Canvas I",
       "note": "Everything together.",
       "rows": [
         ".AB#.A.",
@@ -465,13 +535,15 @@
         "states": 144
       },
       "ko": {
-        "name": "조각 11",
+        "name": "큰 화폭 I",
         "note": "지금까지의 모든 것."
-      }
+      },
+      "extra": true,
+      "parent": "p-third"
     },
     {
       "id": "p-12",
-      "name": "Fragment 12",
+      "name": "Large Canvas II",
       "note": "Everything together.",
       "rows": [
         "..Cd#A.",
@@ -491,9 +563,11 @@
         "states": 784
       },
       "ko": {
-        "name": "조각 12",
+        "name": "큰 화폭 II",
         "note": "지금까지의 모든 것."
-      }
+      },
+      "extra": true,
+      "parent": "p-11"
     }
   ]
 }

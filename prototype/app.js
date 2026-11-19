@@ -214,13 +214,27 @@ function stars(strikes, par) {
   return strikes <= par ? '★★★' : strikes <= par + 1 ? '★★☆' : '★☆☆';
 }
 
+// Extra levels hang off a main level (`parent`), like side branches: optional, opened by clearing
+// the parent, and skipped by "Next". An extra can hang off another extra (A → B).
+const isLocked = def => !!def.extra && store.best[def.parent] == null;
+const extrasOf = def => S.levels.filter(d => d.extra && d.parent === def.id);
+function nextMain(def) { // next main level after this one (for an extra: after the main level it hangs off)
+  let root = def;
+  while (root?.extra) root = S.levels.find(d => d.id === root.parent);
+  const i = S.levels.indexOf(root);
+  return i < 0 ? null : S.levels.slice(i + 1).find(d => !d.extra) ?? null;
+}
+
 function renderList() {
   const el = $('levelList');
   const item = (def, custom) => {
     const best = store.best[def.id];
     const active = S.mode === 'play' && S.def && S.def.id === def.id ? ' active' : '';
-    const meta = best != null ? `<small class="stars">${stars(best, def.par)}</small>` : `<small>${t('par')} ${def.par ?? '?'}</small>`;
-    return `<button class="lvl${active}" data-id="${def.id}" data-custom="${custom ? 1 : ''}"><span>${escapeHtml(lt(def, 'name'))}</span>${meta}</button>`;
+    const locked = S.mode === 'play' && isLocked(def);
+    const meta = locked ? `<small>${t('locked')}</small>` : best != null ? `<small class="stars">${stars(best, def.par)}</small>` : `<small>${t('par')} ${def.par ?? '?'}</small>`;
+    const name = (def.extra ? `<em class="tag">${t('extra')}</em>` : '') + escapeHtml(lt(def, 'name'));
+    const tip = locked ? ` title="${escapeHtml(t('unlockHint', { name: lt(S.levels.find(d => d.id === def.parent) ?? {}, 'name') }))}"` : '';
+    return `<button class="lvl${def.extra ? ' extra' : ''}${locked ? ' locked' : ''}${active}" data-id="${def.id}" data-custom="${custom ? 1 : ''}"${tip}><span>${name}</span>${meta}</button>`;
   };
   el.innerHTML = `<h3>${t('listProto')}</h3>` + S.levels.map(d => item(d, false)).join('') +
     `<h3>${t('listMine')}</h3>` + (store.custom.length ? store.custom.map(d => item(d, true)).join('') : `<small style="color:var(--muted)">${t('makeOne')}</small>`);
@@ -365,20 +379,24 @@ function win() {
   const prev = store.best[S.def.id];
   if (prev == null || strikes < prev) { store.best[S.def.id] = strikes; saveStore(); }
   log('win', { strikes, par: par ?? null, hints: S.hints });
+  const custom = store.custom.includes(S.def);
   const list = allLevels();
-  const idx = list.findIndex(d => d.id === S.def.id);
-  const next = list[idx + 1];
+  const next = custom ? list[list.indexOf(S.def) + 1] : nextMain(S.def);
+  const extra = custom ? null : extrasOf(S.def)[0]; // just opened by this clear
   $('overlay').innerHTML = `<div>
     <h2>${t('restored')}</h2>
     <div class="stars">${stars(strikes, par)}</div>
     <p>${t('result', { s: strikes, p: par ?? '?' })}${S.hints ? t('hints', { n: S.hints }) : ''}</p>
-    <button id="ovRetry">${t('retry')}</button> ${next && S.def.id !== 'edit-test' ? `<button id="ovNext" class="primary">${t('next')}</button>` : ''}
+    <button id="ovRetry">${t('retry')}</button>
+    ${extra ? `<button id="ovExtra" class="extra${next ? '' : ' primary'}">${t('extra')}: ${escapeHtml(lt(extra, 'name'))}</button>` : ''}
+    ${next && S.def.id !== 'edit-test' ? `<button id="ovNext" class="primary">${t('next')}</button>` : ''}
     ${S.def.id === 'edit-test' ? `<button id="ovEdit" class="primary">${t('backEditor')}</button>` : ''}
   </div>`;
   if (S.baitKey) say(S.fell ? 'winAfterBait' : 'winClean');
   $('overlay').hidden = false;
   $('ovRetry').onclick = restart;
   if ($('ovNext')) $('ovNext').onclick = () => loadLevel(next);
+  if ($('ovExtra')) $('ovExtra').onclick = () => loadLevel(extra);
   if ($('ovEdit')) $('ovEdit').onclick = enterEdit;
   updateHud(); renderList();
 }
@@ -625,7 +643,7 @@ function wire() {
     const def = allLevels().find(d => d.id === btn.dataset.id);
     if (!def) return;
     if (S.mode === 'edit') { setEditRows(def.rows, def, def.under); renderBoard(); }
-    else loadLevel(def);
+    else if (!isLocked(def)) loadLevel(def);
   });
 
   $('undo').onclick = undo;
@@ -705,6 +723,7 @@ async function main() {
   S.levels = data.levels;
   let last = null;
   try { last = localStorage.getItem(STORE_KEY + '.last'); } catch { }
-  loadLevel(allLevels().find(d => d.id === last) ?? S.levels[0]);
+  const lastDef = allLevels().find(d => d.id === last);
+  loadLevel(lastDef && !isLocked(lastDef) ? lastDef : S.levels[0]);
 }
 main();
