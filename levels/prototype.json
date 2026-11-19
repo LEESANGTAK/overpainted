@@ -277,6 +277,35 @@
       }
     },
     {
+      "id": "p-hold",
+      "name": "All at Once",
+      "note": "Four of one pigment can lift in a single strike.",
+      "rows": [
+        ".CAA.",
+        "AA.A.",
+        "C...C",
+        "CCAA."
+      ],
+      "ko": {
+        "name": "한꺼번에",
+        "note": "같은 색 네 장이 한 번에 녹을 수도 있습니다.",
+        "voice": {
+          "stuckAfterBait": "한 번 아꼈지. 대신 한 장이 남았고.",
+          "winAfterBait": "같은 자리. 제 몫을 다 막고 나서야.",
+          "winClean": "먼저 막게 뒀군."
+        }
+      },
+      "bait": [
+        2,
+        1
+      ],
+      "voice": {
+        "stuckAfterBait": "One strike saved. One tile left over.",
+        "winAfterBait": "Same spot. Once it had done its guarding.",
+        "winClean": "You let it stand guard first."
+      }
+    },
+    {
       "id": "p-09",
       "name": "Fragment 9",
       "note": "Double coat: it takes two matches. The first only lifts the top coat.",

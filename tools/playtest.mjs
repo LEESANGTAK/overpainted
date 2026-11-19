@@ -53,7 +53,7 @@ function agg(id, def) {
     visits: 0, wins: 0, firstClearMs: null, firstClearStrikes: null, best: null, activeMs: 0,
     strikes: 0, fizzles: 0, optimalStrikes: 0, judgedStrikes: 0, undos: 0, restarts: 0, hints: 0,
     blunders: 0, noticeStrikes: [], noticeMs: [], deadEnds: 0, thinkMs: [], firstThinkMs: [],
-    devUsed: false, replayUsed: false, abandoned: 0, ratings: [], timeline: [],
+    devUsed: false, replayUsed: false, abandoned: 0, timeline: [],
   });
   return levels.get(id);
 }
@@ -137,7 +137,6 @@ for (const file of files) {
         tl('WIN', { strikes: e.strikes, par: e.par, hints: e.hints });
         break;
       }
-      case 'rate': L.ratings.push({ ...e, t: undefined, type: undefined, lvl: undefined }); tl('rate', { diff: e.diff, aha: e.aha, fun: e.fun }); break;
       case 'leave': if (!cur.won && !cur.firstMove) { L.abandoned++; tl('leave', { strikes: e.strikes }); } cur = null; break;
       case 'replay': L.replayUsed = true; tl('replay'); break;
     }
@@ -155,8 +154,6 @@ const rows = [...levels.values()].sort((a, b) => {
   return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib);
 });
 for (const L of rows) {
-  const pick = k => { const v = L.ratings.filter(r => r[k] != null).map(r => r[k]); return v.length ? v[v.length - 1] : null; };
-  L.feltDifficulty = pick('diff'); L.aha = pick('aha'); L.fun = pick('fun');
   L.optimalRate = L.judgedStrikes ? L.optimalStrikes / L.judgedStrikes : null;
   L.medianThinkMs = median(L.thinkMs);
   L.maxThinkMs = L.thinkMs.length ? Math.max(...L.thinkMs) : null;
@@ -167,7 +164,7 @@ for (const L of rows) {
 const pad = (s, n) => String(s).padEnd(n);
 const lpad = (s, n) => String(s).padStart(n);
 console.log(`Playtest sessions: ${files.length}\n`);
-console.log(pad('level', 22) + lpad('par', 4) + lpad('trap', 6) + lpad('clear', 7) + lpad('time', 7) + lpad('strk', 6) + lpad('undo', 5) + lpad('rst', 4) + lpad('hint', 5) + lpad('blndr', 6) + lpad('notice', 8) + lpad('opt%', 6) + lpad('think', 7) + lpad('felt', 5) + lpad('aha', 4) + lpad('fun', 4) + '  flags');
+console.log(pad('level', 22) + lpad('par', 4) + lpad('trap', 6) + lpad('clear', 7) + lpad('time', 7) + lpad('strk', 6) + lpad('undo', 5) + lpad('rst', 4) + lpad('hint', 5) + lpad('blndr', 6) + lpad('notice', 8) + lpad('opt%', 6) + lpad('think', 7) + '  flags');
 for (const L of rows) {
   const flags = [L.devUsed && 'dev', L.replayUsed && 'replay', L.abandoned && `quit×${L.abandoned}`, L.fizzles && `fizzle×${L.fizzles}`, L.deadEnds && `deadend×${L.deadEnds}`].filter(Boolean).join(' ');
   console.log(
@@ -175,8 +172,7 @@ for (const L of rows) {
     lpad(L.firstClearStrikes != null ? `${L.firstClearStrikes}${L.best < L.firstClearStrikes ? '→' + L.best : ''}` : 'no', 7) +
     lpad(sec(L.firstClearMs ?? L.activeMs), 7) + lpad(L.strikes, 6) + lpad(L.undos, 5) + lpad(L.restarts, 4) + lpad(L.hints, 5) +
     lpad(L.blunders, 6) + lpad(L.medianNoticeStrikes != null ? `${L.medianNoticeStrikes}/${sec(L.medianNoticeMs)}` : '–', 8) +
-    lpad(L.optimalRate != null ? Math.round(L.optimalRate * 100) : '–', 6) + lpad(sec(L.medianThinkMs), 7) +
-    lpad(L.feltDifficulty ?? '–', 5) + lpad(L.aha == null ? '–' : L.aha ? 'Y' : 'N', 4) + lpad(L.fun ?? '–', 4) + '  ' + flags);
+    lpad(L.optimalRate != null ? Math.round(L.optimalRate * 100) : '–', 6) + lpad(sec(L.medianThinkMs), 7) + '  ' + flags);
 }
 console.log(`
 clear  = strikes on first clear (→ best later) · time = active time to first clear (or total if never cleared)
@@ -192,8 +188,7 @@ if (sh.length >= 4) {
   const tb = sh.map(L => L.trapBits);
   console.log(`\nSpearman vs trap bits (n=${sh.length}):  time ${spearman(tb, sh.map(L => L.firstClearMs)).toFixed(2)}` +
     `  · undo+restart ${spearman(tb, sh.map(L => L.undos + L.restarts)).toFixed(2)}` +
-    `  · blunders ${spearman(tb, sh.map(L => L.blunders)).toFixed(2)}` +
-    (sh.every(L => L.feltDifficulty != null) ? `  · felt ${spearman(tb, sh.map(L => L.feltDifficulty)).toFixed(2)}` : ''));
+    `  · blunders ${spearman(tb, sh.map(L => L.blunders)).toFixed(2)}`);
 }
 
 const out = join(dir, 'report.json');

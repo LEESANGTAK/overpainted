@@ -7,7 +7,6 @@ let predictWeights = DEFAULT_WEIGHTS; // replaced by levels/predict-weights.json
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const GLYPHS = ['●', '▲', '■', '◆', '✚', '★'];
 const PIGMENTS = ['Vermilion', 'Ultramarine', 'Ochre', 'Verdigris', 'Violet', 'Bone'];
 const STORE_KEY = 'overpainted.proto.v1';
 
@@ -157,10 +156,12 @@ function fitSize(w, h) {
 
 function tileHtml(k, varnish, u = k) {
   const other = varnish && u !== k;
-  const top = `<div class="tile c${k}${varnish ? ' varnish' : ''}${other ? ' over' : ''}" style="--c:var(--p${k})"><span class="glyph">${GLYPHS[k]}</span></div>`;
+  // Colour alone tells pigments apart (no glyphs: colour-blind play is out of scope).
+  const top = `<div class="tile c${k}${varnish ? ' varnish' : ''}" style="--c:var(--p${k})"></div>`;
   // double coat: a second layer sits underneath and shows once the top peels off. Same paint by
-  // default; an undercoat of another pigment is shown from the start (pure puzzle, no surprises).
-  return varnish ? `<div class="tile under c${u}${other ? ' other' : ''}" style="--c:var(--p${u})"><span class="glyph">${GLYPHS[u]}</span></div>${top}` : top;
+  // default; an undercoat of another pigment is shown from the start (pure puzzle, no surprises),
+  // laid out exactly like a same-paint double coat: a rim of the paint beneath around the top coat.
+  return varnish ? `<div class="tile under c${u}${other ? ' other' : ''}" style="--c:var(--p${u})"></div>${top}` : top;
 }
 
 function renderBoard() {
@@ -298,6 +299,7 @@ function loadLevel(def) {
   S.board = parseLevel(def);
   S.hp = S.board.initHp.slice();
   S.hist = []; S.won = false; S.hints = 0; S.hintCell = -1; S.busy = false; S.queued = null;
+  S.gen = (S.gen ?? 0) + 1; // a strike still animating from the previous level checks this and drops out
   // the overpainter's bait for this level (if any): the move a click on def.bait makes at the start
   S.baitKey = def.bait ? probe(S.board, S.board.initHp, def.bait[1] * S.board.w + def.bait[0])?.hits.join(',') : null;
   S.attemptBait = false; S.fell = false; S.said = new Set();
@@ -330,11 +332,14 @@ async function strikeAt(c) {
     return;
   }
   S.busy = true;
+  const gen = S.gen;
   for (const t of r.hits) {
     const tile = cellEl(S.board.tileCell[t]).querySelector('.tile:not(.under)');
     tile.classList.add(S.hp[t] >= 2 ? 'strip' : 'dissolve');
   }
   await sleep(280);
+  if (gen !== S.gen) return; // another level was loaded mid-animation: drop this strike
+  if (S.mode !== 'play') { S.busy = false; return; } // editor opened mid-animation
   if (!S.hist.length && !S.replaying) {
     S.attemptBait = r.hits.join(',') === S.baitKey;
     if (S.attemptBait) S.fell = true;
@@ -367,22 +372,11 @@ function win() {
     <h2>${t('restored')}</h2>
     <div class="stars">${stars(strikes, par)}</div>
     <p>${t('result', { s: strikes, p: par ?? '?' })}${S.hints ? t('hints', { n: S.hints }) : ''}</p>
-    <div class="rate" id="rate">
-      <div><span>${t('felt')}</span>${[1, 2, 3, 4, 5].map(n => `<button data-k="diff" data-v="${n}">${n}</button>`).join('')}</div>
-      <div><span>${t('aha')}</span><button data-k="aha" data-v="1">${t('yes')}</button><button data-k="aha" data-v="0">${t('no')}</button></div>
-      <div><span>${t('fun')}</span>${[1, 2, 3, 4, 5].map(n => `<button data-k="fun" data-v="${n}">${n}</button>`).join('')}</div>
-    </div>
     <button id="ovRetry">${t('retry')}</button> ${next && S.def.id !== 'edit-test' ? `<button id="ovNext" class="primary">${t('next')}</button>` : ''}
     ${S.def.id === 'edit-test' ? `<button id="ovEdit" class="primary">${t('backEditor')}</button>` : ''}
   </div>`;
   if (S.baitKey) say(S.fell ? 'winAfterBait' : 'winClean');
   $('overlay').hidden = false;
-  $('rate').onclick = e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    log('rate', { [b.dataset.k]: +b.dataset.v });
-  };
   $('ovRetry').onclick = restart;
   if ($('ovNext')) $('ovNext').onclick = () => loadLevel(next);
   if ($('ovEdit')) $('ovEdit').onclick = enterEdit;
@@ -555,12 +549,15 @@ function runEditAnalysis() {
       // first-move predictor: does the player's instinct walk into the trap?
       const lost = hp => { const r = safeAnalyze(b, hp, 500_000); return r !== 'big' && !r.solvable; };
       const br = baitReport(b, lost, predictWeights);
-      const t = br.top;
-      const where = `(${t.cell % b.w},${t.cell / b.w | 0})`;
-      const what = [...new Set(t.hits.map(h => PIGMENTS[b.tileColor[h]]))].join('+');
-      html += row('Instinct move', `${where} ${what}×${t.hits.length} · ${pct(t.p)}`)
-        + row('…and it', t.fatal ? 'LOSES (bait works)' : 'is safe', t.fatal ? 'good' : '')
-        + row('Instinct loses', pct(br.pFatal));    }
+      const t = br.top; // undefined when the board has no strike at all (e.g. empty board)
+      if (t) {
+        const where = `(${t.cell % b.w},${t.cell / b.w | 0})`;
+        const what = [...new Set(t.hits.map(h => PIGMENTS[b.tileColor[h]]))].join('+');
+        html += row('Instinct move', `${where} ${what}×${t.hits.length} · ${pct(t.p)}`)
+          + row('…and it', t.fatal ? 'LOSES (bait works)' : 'is safe', t.fatal ? 'good' : '')
+          + row('Instinct loses', pct(br.pFatal));
+      }
+    }
     for (const w of warn) html += `<dt style="grid-column:1/-1;color:var(--bad)">${w}</dt>`;
     $('editStats').innerHTML = html;
     res(a);
@@ -573,7 +570,7 @@ function showMode() {
   $('modePlay').classList.toggle('active', !edit);
   $('modeEdit').classList.toggle('active', edit);
   $('editPanel').hidden = !edit;
-  $('devPanel').hidden = edit;
+  $('devPanel').hidden = edit || !IS_LOCAL; // testers never see the dev overlay
   $('hud').style.visibility = edit ? 'hidden' : '';
   $('controls').style.visibility = edit ? 'hidden' : '';
   $('overlay').hidden = edit || !S.won;
@@ -627,7 +624,7 @@ function wire() {
     if (!btn) return;
     const def = allLevels().find(d => d.id === btn.dataset.id);
     if (!def) return;
-    if (S.mode === 'edit') { setEditRows(def.rows, def); renderBoard(); }
+    if (S.mode === 'edit') { setEditRows(def.rows, def, def.under); renderBoard(); }
     else loadLevel(def);
   });
 
@@ -687,7 +684,7 @@ function wire() {
     if (k === 'z') undo();
     else if (k === 'r') restart();
     else if (k === 'h') hint();
-    else if (k === 'd') { $('devToggle').checked = !S.dev; $('devToggle').onchange({ target: $('devToggle') }); }
+    else if (k === 'd' && IS_LOCAL) { $('devToggle').checked = !S.dev; $('devToggle').onchange({ target: $('devToggle') }); }
   });
   const onResize = () => { if (S.def || S.mode === 'edit') renderBoard(); };
   window.addEventListener('resize', onResize);
@@ -696,6 +693,7 @@ function wire() {
 }
 
 async function main() {
+  if (!IS_LOCAL) document.querySelector('.keys').dataset.i18n = 'keysPlay';
   applyStatic();
   wire();
   $('langBtn').onclick = toggleLang;
