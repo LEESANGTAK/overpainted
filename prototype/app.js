@@ -155,14 +155,24 @@ function fitSize(w, h) {
   return Math.max(8, Math.min(26, Math.floor(aw / w)), Math.min(72, maxFit));
 }
 
-function tileHtml(k, varnish, u = k) {
+// Impasto dabs vary a little per tile (tilt, shape, brush grain). Seeded by level and cell, so a
+// tile keeps its shape across redraws and only changes when the level does.
+function dabStyle(id, c) {
+  let s = hashStr(`${id}|${c}`);
+  const r = () => ((s = Math.imul(s ^ (s >>> 15), 2246822507) + 0x9e3779b9 >>> 0) / 4294967296);
+  const p = () => Math.round(6 + r() * 16) + '%';
+  return `;--rot:${(r() * 8 - 4).toFixed(1)}deg;--br:${p()} ${p()} ${p()} ${p()} / ${p()} ${p()} ${p()} ${p()}`
+    + `;--br2:${p()} ${p()} ${p()} ${p()} / ${p()} ${p()} ${p()} ${p()};--grain:${100 + Math.round(r() * 30)}deg`;
+}
+
+function tileHtml(k, varnish, u = k, dab = '') {
   const other = varnish && u !== k;
   // Colour alone tells pigments apart (no glyphs: colour-blind play is out of scope).
-  const top = `<div class="tile c${k}${varnish ? ' varnish' : ''}" style="--c:var(--p${k})"></div>`;
-  // double coat: a second layer sits underneath and shows once the top peels off. Same paint by
+  const top = `<div class="tile c${k}${varnish ? ' varnish' : ''}" style="--c:var(--p${k})${dab}"></div>`;
+  // double coat: a second dab sits underneath and shows once the top peels off. Same paint by
   // default; an undercoat of another pigment is shown from the start (pure puzzle, no surprises),
-  // laid out exactly like a same-paint double coat: a rim of the paint beneath around the top coat.
-  return varnish ? `<div class="tile under c${u}${other ? ' other' : ''}" style="--c:var(--p${u})"></div>${top}` : top;
+  // laid out exactly like a same-paint double coat: the wider dab beneath, the top coat on it.
+  return varnish ? `<div class="tile under c${u}${other ? ' other' : ''}" style="--c:var(--p${u})${dab}"></div>${top}` : top;
 }
 
 function renderBoard() {
@@ -180,7 +190,8 @@ function renderBoard() {
     if (b.blocked[c]) { html += `<div class="cell" data-c="${c}"><div class="oldtape"></div></div>`; continue; }
     if (isTaped(b, hp, c)) { html += `<div class="cell taped" data-c="${c}"><div class="tape"></div></div>`; continue; }
     const t = b.tileAt[c];
-    if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t]) : tileHtml(b.underColor[t], false)}</div>`;
+    const dab = dabStyle(id, c);
+    if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t], dab) : tileHtml(b.underColor[t], false, b.underColor[t], dab)}</div>`;
     else html += `<div class="cell empty${c === S.hintCell ? ' hint' : ''}" data-c="${c}"></div>`;
   }
   el.innerHTML = html;
