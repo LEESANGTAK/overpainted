@@ -31,6 +31,27 @@ test('two pairs in one strike', () => {
   assert.equal(probe(b, b.initHp, at(b, 1, 1)).hits.length, 4);
 });
 
+test('mixed tile: pairs with either pigment, and with red + blue lifts all three', () => {
+  // A+B mix in the middle of the top row
+  const b = parseLevel({ rows: ['.A.', 'B.A', '.A.'], mix: ['.B.', '...', '...'] });
+  const mixed = b.tileAt[at(b, 1, 0)];
+  assert.equal(b.mixColor[mixed], 1);
+  // centre sees: up = mix(A+B), right = A, down = A, left = B -> all four lift
+  assert.equal(probe(b, b.initHp, at(b, 1, 1)).hits.length, 4);
+  // mix + blue only
+  const b2 = parseLevel({ rows: ['A.B'], mix: ['B..'] });
+  assert.equal(probe(b2, b2.initHp, at(b2, 1, 0)).hits.length, 2);
+  // red + blue alone do not pair
+  const b3 = parseLevel({ rows: ['A.B'] });
+  assert.equal(probe(b3, b3.initHp, at(b3, 1, 0)).hits.length, 0);
+  // two mixes pair; a mix only on a single-layer tile of another pigment
+  const b4 = parseLevel({ rows: ['A.C'], mix: ['B.B'] });
+  assert.equal(probe(b4, b4.initHp, at(b4, 1, 0)).hits.length, 2);
+  assert.throws(() => parseLevel({ rows: ['a'], mix: ['B'] }));
+  assert.throws(() => parseLevel({ rows: ['A'], mix: ['A'] }));
+  assert.throws(() => parseLevel({ rows: ['.'], mix: ['A'] }));
+});
+
 test('old tape blocks sight', () => {
   const b = parseLevel({ rows: ['A#.A'] });
   assert.deepEqual(probe(b, b.initHp, at(b, 2, 0)).hits, []);
@@ -134,7 +155,9 @@ test('fast solver agrees with reference on random boards', () => {
       }
       rows.push(r); under.push(u);
     }
-    const b = parseLevel({ rows, under, tape: i % 3 === 0 ? 1 + (i % 2) : 0 });
+    // mix some single-layer tiles with a second pigment
+    const mix = rows.map(r => [...r].map(ch => 'ABC'.includes(ch) && rnd() < 0.3 ? 'ABC'[('ABC'.indexOf(ch) + 1 + Math.floor(rnd() * 2)) % 3] : '.').join(''));
+    const b = parseLevel({ rows, under: under.map((u, y) => [...u].map((c, x) => (mix[y][x] !== '.' ? '.' : c)).join('')), mix, tape: i % 3 === 0 ? 1 + (i % 2) : 0 });
     const fast = analyze(b), slow = slowSolve(b);
     assert.equal(fast.solvable, slow.f < Infinity, rows.join('/'));
     if (fast.solvable) assert.equal(fast.minStrikes, slow.f, rows.join('/'));

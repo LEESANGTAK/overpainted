@@ -4,7 +4,9 @@
 // Model: conditional logit. Each move gets a score w·f (features below); the probability of a
 // move is softmax(score) over all moves available in the position. Weights start from the
 // hypotheses we have and are refit from playtest logs with tools/predict.mjs --calibrate.
-import { listMoves, probe, applyHits, colorOf } from './rules.js';
+import { listMoves, probe, applyHits, maskOf } from './rules.js';
+
+const bitsOf = m => [0, 1, 2, 3, 4, 5].filter(k => m & (1 << k));
 
 export const FEATURES = [
   // "solve the easy question first": the strike lifts every remaining tile of a pigment
@@ -22,10 +24,10 @@ export const FEATURES = [
 // Starting weights (hand-set from the first playtests; see memory: fewest-tiles colour is the bait).
 export const DEFAULT_WEIGHTS = { closes: 2.0, rarest: 1.0, hits: 0.6, straight: 0.5, reach: -1.5, varnish: -0.4, red: 0.0 };
 
-/** Remaining tile count per pigment. */
+/** Remaining tile count per pigment (a mixed tile counts for both of its pigments). */
 function countsByColor(board, hp) {
   const n = new Array(6).fill(0);
-  for (let t = 0; t < board.nTiles; t++) if (hp[t] > 0) n[colorOf(board, hp, t)]++;
+  for (let t = 0; t < board.nTiles; t++) if (hp[t] > 0) for (const k of bitsOf(maskOf(board, hp, t))) n[k]++;
   return n;
 }
 
@@ -33,11 +35,11 @@ function countsByColor(board, hp) {
 export function moveFeatures(board, hp, move, counts = countsByColor(board, hp)) {
   const { w, h } = board;
   const after = applyHits(hp, move.hits);
-  const colors = [...new Set(move.hits.map(t => colorOf(board, hp, t)))];
+  const colors = bitsOf(move.hits.reduce((m, t) => m | maskOf(board, hp, t), 0));
   let closes = 0;
   for (const k of colors) {
     let left = 0;
-    for (let t = 0; t < board.nTiles; t++) if (after[t] > 0 && colorOf(board, after, t) === k) left++;
+    for (let t = 0; t < board.nTiles; t++) if (after[t] > 0 && maskOf(board, after, t) & (1 << k)) left++;
     if (left === 0) closes = 1;
   }
   const present = counts.filter(n => n > 0);

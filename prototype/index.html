@@ -8,9 +8,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=20261120-9">
+<link rel="stylesheet" href="style.css?v=20261121-2">
 </head>
 <body>
+<!-- marbling for mixed tiles: turbulence pushes the pigment bands around (see .tile.mixed::before) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="marble" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="turbulence" baseFrequency="0.022" numOctaves="1" seed="7" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="48" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
 <header>
   <div class="brand">THE OVERPAINTED <span data-i18n="brandSub">prototype</span></div>
   <nav>
@@ -67,6 +74,7 @@
       <div id="palette"></div>
       <label class="row"><input type="checkbox" id="varnishBrush"> <span data-i18n="varnishBrush">Double coat (2 matches)</span></label>
       <label class="row"><span data-i18n="underBrush">Coat beneath</span> <select id="underBrush"><option value="" data-i18n="underSame">same pigment</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option></select></label>
+      <label class="row"><span data-i18n="mixBrush">Mixed with</span> <select id="mixBrush"><option value="" data-i18n="mixNone">nothing</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option></select></label>
       <h2 data-i18n="size">Size</h2>
       <div class="row">
         <input type="number" id="editW" min="2" max="12" value="6"> ×
@@ -94,6 +102,6 @@
   </aside>
 </main>
 
-<script type="module" src="app.js?v=20261120-9"></script>
+<script type="module" src="app.js?v=20261121-2"></script>
 </body>
 </html>

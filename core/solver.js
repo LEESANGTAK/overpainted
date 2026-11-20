@@ -38,8 +38,9 @@ function buildRays(board) {
  * A tape move ({cell, hits: [], tape: true}) tapes that cell; it costs a move like a strike.
  */
 function movesFast(board, rays, hp) {
-  const { tileAt, blocked, tileColor, underColor, nTiles } = board;
-  const col = t => (hp[t] >= 2 ? tileColor[t] : underColor[t]);
+  const { tileAt, blocked, tileColor, underColor, mixColor, nTiles } = board;
+  // pigments a tile counts as (bitmask); a mixed single tile counts as both of its pigments
+  const mask = t => (1 << (hp[t] >= 2 ? tileColor[t] : underColor[t])) | (mixColor[t] >= 0 && hp[t] === 1 ? 1 << mixColor[t] : 0);
   const N = board.w * board.h;
   const taped = board.tape > 0 ? cc => hp[nTiles + cc] === 1 : () => false;
   const out = new Map();
@@ -67,10 +68,8 @@ function movesFast(board, rays, hp) {
     for (let i = 0; i < 4; i++) {
       const t = found[i];
       if (t < 0) continue;
-      const ct = col(t);
-      let k = 0;
-      for (let j = 0; j < 4; j++) if (found[j] >= 0 && col(found[j]) === ct) k++;
-      if (k >= 2) hits.push(t);
+      const mt = mask(t);
+      for (let j = 0; j < 4; j++) if (j !== i && found[j] >= 0 && (mask(found[j]) & mt)) { hits.push(t); break; }
     }
     if (hits.length < 2) continue;
     hits.sort((a, b) => a - b);

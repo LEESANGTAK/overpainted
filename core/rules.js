@@ -10,9 +10,14 @@
 // different pigment. "c" in rows + "A" in under = a C coat over an A coat. Once the top coat
 // is lifted the tile is an ordinary A tile. The undercoat is shown from the start.
 //
+// Optional `mix` rows (same size): a letter on a single-layer tile mixes a second pigment into
+// it. "A" in rows + "B" in mix = a tile of red and blue together; it pairs with red, with blue,
+// and with another mixed tile that shares either. (Only single-layer tiles can be mixed.)
+//
 // A strike targets an EMPTY cell. From it, look up/right/down/left and take the nearest
 // non-empty cell in each direction (old tape stops the look and yields nothing).
-// Among those (up to 4) tiles, every tile whose pigment appears 2+ times loses one layer.
+// Among those (up to 4) tiles, every tile that shares a pigment with at least one of the others
+// loses one layer (so red + blue + a red-blue mix lifts all three).
 // A strike that hits nothing is a no-op. The level is cleared when no paint tiles remain.
 //
 // Masking tape (optional `tape: N` on a level): the player may tape up to N cells that are
@@ -35,12 +40,16 @@ export function parseLevel(def) {
   const blocked = new Uint8Array(w * h);
   const under = def.under;
   if (under != null && (!Array.isArray(under) || under.length !== h)) throw new Error('`under` must have one row per row');
-  const tileCell = [], tileColor = [], underColor = [], initHp = [];
+  const mix = def.mix;
+  if (mix != null && (!Array.isArray(mix) || mix.length !== h)) throw new Error('`mix` must have one row per row');
+  const tileCell = [], tileColor = [], underColor = [], mixColor = [], initHp = [];
   const tape = Math.max(0, def.tape | 0);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const ch = rows[y][x] ?? '.';
       const c = y * w + x;
+      const mixHere = mix?.[y]?.[x] ?? '.';
+      if ((ch === '#' || ch === '.' || ch === ' ') && mixHere !== '.' && mixHere !== ' ') throw new Error(`Mix at ${x},${y} is not on a paint tile`);
       if (ch === '#') blocked[c] = 1;
       else if (ch === '.' || ch === ' ') { /* empty */ }
       else {
@@ -52,9 +61,15 @@ export function parseLevel(def) {
         const uch = under?.[y]?.[x] ?? '.';
         const ku = uch === '.' || uch === ' ' ? -1 : COLOR_CHARS.indexOf(uch.toUpperCase());
         if (uch !== '.' && uch !== ' ' && ku < 0) throw new Error(`Unknown undercoat '${uch}' at ${x},${y}`);
+        // (mix is read below, once the tile's layer count is known)
         tileColor.push(k);
         underColor.push(ku >= 0 ? ku : k);
         initHp.push(ch === up && ku < 0 ? 1 : 2);
+        const mch = mix?.[y]?.[x] ?? '.';
+        const km = mch === '.' || mch === ' ' ? -1 : COLOR_CHARS.indexOf(mch.toUpperCase());
+        if (mch !== '.' && mch !== ' ' && km < 0) throw new Error(`Unknown mix pigment '${mch}' at ${x},${y}`);
+        if (km >= 0 && (initHp.at(-1) !== 1 || km === k)) throw new Error(`Mix at ${x},${y} needs a single-layer tile of another pigment`);
+        mixColor.push(km);
       }
     }
   }
@@ -64,6 +79,7 @@ export function parseLevel(def) {
     tileCell: Int32Array.from(tileCell),
     tileColor: Uint8Array.from(tileColor),   // pigment of the top coat (the only coat for single tiles)
     underColor: Uint8Array.from(underColor), // pigment once the top coat is gone (= tileColor unless undercoated)
+    mixColor: Int8Array.from(mixColor),      // second pigment of a mixed single tile (-1 = none)
     initHp: Uint8Array.from(tape > 0 ? [...initHp, ...new Array(w * h).fill(0)] : initHp),
     nTiles: tileCell.length,
     tape, // masking tape the player may use (0 = none)
@@ -73,6 +89,17 @@ export function parseLevel(def) {
 /** Pigment index tile t shows in state hp. */
 export function colorOf(board, hp, t) {
   return hp[t] >= 2 ? board.tileColor[t] : board.underColor[t];
+}
+
+/** Pigments tile t counts as in state hp, as a bitmask (bit k = pigment k). Two tiles pair if their masks overlap. */
+export function maskOf(board, hp, t) {
+  const m = board.mixColor[t];
+  return (1 << colorOf(board, hp, t)) | (m >= 0 && hp[t] === 1 ? 1 << m : 0);
+}
+
+/** True if tile t is a mixed tile (two pigments). */
+export function isMixed(board, t) {
+  return board.mixColor[t] >= 0;
 }
 
 /** True if tile t still has a top coat whose pigment differs from the coat beneath. */
@@ -96,6 +123,22 @@ export function toRows(board, hp = board.initHp) {
     rows.push(s);
   }
   return rows;
+}
+
+/** `mix` rows for the board in the given state, or null if no tile is mixed. */
+export function toMix(board, hp = board.initHp) {
+  let any = false;
+  const rows = [];
+  for (let y = 0; y < board.h; y++) {
+    let s = '';
+    for (let x = 0; x < board.w; x++) {
+      const t = board.tileAt[y * board.w + x];
+      if (t >= 0 && hp[t] > 0 && board.mixColor[t] >= 0) { s += COLOR_CHARS[board.mixColor[t]]; any = true; }
+      else s += '.';
+    }
+    rows.push(s);
+  }
+  return any ? rows : null;
 }
 
 /** `under` rows for the board in the given state, or null if no tile has a different undercoat. */
@@ -171,12 +214,11 @@ export function probe(board, hp, cell) {
   for (let i = 0; i < 4; i++) {
     const t = rays[i].tile;
     if (t < 0) continue;
-    let n = 0;
+    const mt = maskOf(board, hp, t);
     for (let j = 0; j < 4; j++) {
       const u = rays[j].tile;
-      if (u >= 0 && colorOf(board, hp, u) === colorOf(board, hp, t)) n++;
+      if (j !== i && u >= 0 && (maskOf(board, hp, u) & mt)) { hits.push(t); break; }
     }
-    if (n >= 2) hits.push(t);
   }
   hits.sort((a, b) => a - b);
   return { rays, hits };

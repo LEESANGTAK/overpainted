@@ -1,4 +1,4 @@
-import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft } from '../core/rules.js';
+import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { t, lt, applyStatic, toggleLang } from './i18n.js';
@@ -89,7 +89,7 @@ const S = {
   levelInfo: null,          // analysis of the level start (par, metrics, solution)
   nowInfo: null,            // analysis of the current position (dev overlay / hints)
   mode: 'play', dev: false, busy: false, won: false, hints: 0, size: 56, hintCell: -1,
-  edit: { rows: null, under: null, brush: 'A', varnish: false, underBrush: '', painting: false, info: null },
+  edit: { rows: null, under: null, mix: null, brush: 'A', varnish: false, underBrush: '', mixBrush: '', painting: false, info: null },
 };
 
 // ---------- procedural "original painting" revealed under the paint ----------
@@ -137,7 +137,7 @@ function painting(id, wPx, hPx) {
 // ---------- rendering ----------
 function boardShown() {
   if (S.mode === 'edit') {
-    const b = parseLevel({ rows: S.edit.rows.map(r => r.join('')), under: S.edit.under.map(r => r.join('')) });
+    const b = parseLevel({ rows: S.edit.rows.map(r => r.join('')), under: S.edit.under.map(r => r.join('')), mix: S.edit.mix.map(r => r.join('')) });
     return { b, hp: b.initHp, id: 'edit' };
   }
   return { b: S.board, hp: S.hp, id: S.def.id };
@@ -165,10 +165,13 @@ function dabStyle(id, c) {
     + `;--br2:${p()} ${p()} ${p()} ${p()} / ${p()} ${p()} ${p()} ${p()};--grain:${100 + Math.round(r() * 30)}deg`;
 }
 
-function tileHtml(k, varnish, u = k, dab = '') {
+function tileHtml(k, varnish, u = k, dab = '', mix = -1) {
   const other = varnish && u !== k;
   // Colour alone tells pigments apart (no glyphs: colour-blind play is out of scope).
-  const top = `<div class="tile c${k}${varnish ? ' varnish' : ''}" style="--c:var(--p${k})${dab}"></div>`;
+  // A mixed tile shows both of its pigments in one dab, split corner to corner: the rule is on the tile.
+  const m = !varnish && mix >= 0 ? ` mixed" data-mix="${mix}` : '';
+  const c2 = !varnish && mix >= 0 ? `;--c2:var(--p${mix})` : '';
+  const top = `<div class="tile c${k}${varnish ? ' varnish' : ''}${m}" style="--c:var(--p${k})${c2}${dab}"></div>`;
   // double coat: a second dab sits underneath and shows once the top peels off. Same paint by
   // default; an undercoat of another pigment is shown from the start (pure puzzle, no surprises),
   // laid out exactly like a same-paint double coat: the wider dab beneath, the top coat on it.
@@ -191,7 +194,7 @@ function renderBoard() {
     if (isTaped(b, hp, c)) { html += `<div class="cell taped" data-c="${c}"><div class="tape"></div></div>`; continue; }
     const t = b.tileAt[c];
     const dab = dabStyle(id, c);
-    if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t], dab) : tileHtml(b.underColor[t], false, b.underColor[t], dab)}</div>`;
+    if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t], dab) : tileHtml(b.underColor[t], false, b.underColor[t], dab, b.mixColor[t])}</div>`;
     else html += `<div class="cell empty${c === S.hintCell ? ' hint' : ''}" data-c="${c}"></div>`;
   }
   el.innerHTML = html;
@@ -357,7 +360,7 @@ function loadLevel(def) {
   $('overlay').hidden = true;
   showMode();
   renderBoard(); renderList(); updateHud(); renderDev();
-  log('level_start', { chapter: def.chapter ?? null, rows: def.rows, under: def.under, tape: def.tape || undefined, par: def.par ?? null, dev: S.dev });
+  log('level_start', { chapter: def.chapter ?? null, rows: def.rows, under: def.under, mix: def.mix, tape: def.tape || undefined, par: def.par ?? null, dev: S.dev });
   try { localStorage.setItem(STORE_KEY + '.last', def.id); } catch { }
 }
 
@@ -620,14 +623,15 @@ async function replaySolution() {
 const BRUSHES = ['.', ...COLOR_CHARS.split(''), '#'];
 function enterEdit() {
   S.mode = 'edit';
-  if (!S.edit.rows) setEditRows(S.def ? toRows(S.board, S.board.initHp) : ['......', '......', '......', '......', '......', '......'], S.def, S.def ? toUnder(S.board, S.board.initHp) : null);
+  if (!S.edit.rows) setEditRows(S.def ? toRows(S.board, S.board.initHp) : ['......', '......', '......', '......', '......', '......'], S.def, S.def ? toUnder(S.board, S.board.initHp) : null, S.def ? toMix(S.board, S.board.initHp) : null);
   showMode();
   renderBoard(); renderList(); renderPalette();
 }
-function setEditRows(rows, def, under = null) {
+function setEditRows(rows, def, under = null, mix = null) {
   const w = Math.max(...rows.map(r => r.length));
   S.edit.rows = rows.map(r => r.padEnd(w, '.').split(''));
   S.edit.under = rows.map((_, y) => (under?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
+  S.edit.mix = rows.map((_, y) => (mix?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
   S.edit.info = null;
   $('editW').value = w; $('editH').value = rows.length;
   if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; $('editTape').value = def.tape ?? 0; }
@@ -637,7 +641,8 @@ function renderPalette() {
   $('palette').innerHTML = BRUSHES.map(ch => {
     const k = COLOR_CHARS.indexOf(ch);
     const u = S.edit.varnish && S.edit.underBrush ? COLOR_CHARS.indexOf(S.edit.underBrush) : k;
-    const inner = ch === '#' ? '<div class="oldtape"></div>' : k >= 0 ? tileHtml(k, S.edit.varnish, u) : '';
+    const mk = !S.edit.varnish && S.edit.mixBrush && S.edit.mixBrush !== ch ? COLOR_CHARS.indexOf(S.edit.mixBrush) : -1;
+    const inner = ch === '#' ? '<div class="oldtape"></div>' : k >= 0 ? tileHtml(k, S.edit.varnish, u, '', mk) : '';
     const lbl = ch === '.' ? 'erase' : ch === '#' ? 'tape' : PIGMENTS[k].slice(0, 5);
     return `<button class="brush${S.edit.brush === ch ? ' active' : ''}" data-b="${ch}" title="${lbl}">${inner}<span class="lbl">${lbl}</span></button>`;
   }).join('');
@@ -649,9 +654,12 @@ function paintCell(c) {
   const isPaint = COLOR_CHARS.includes(ch);
   if (S.edit.varnish && isPaint) ch = ch.toLowerCase();
   const u = S.edit.varnish && isPaint && S.edit.underBrush && S.edit.underBrush !== S.edit.brush ? S.edit.underBrush : '.';
-  if (S.edit.rows[y][x] === ch && S.edit.under[y][x] === u) return;
+  // mixing only on single-layer tiles
+  const m = !S.edit.varnish && isPaint && S.edit.mixBrush && S.edit.mixBrush !== S.edit.brush ? S.edit.mixBrush : '.';
+  if (S.edit.rows[y][x] === ch && S.edit.under[y][x] === u && S.edit.mix[y][x] === m) return;
   S.edit.rows[y][x] = ch;
   S.edit.under[y][x] = u;
+  S.edit.mix[y][x] = m;
   S.edit.info = null;
   renderBoard();
 }
@@ -661,6 +669,7 @@ function editDef() {
     rows: S.edit.rows.map(r => r.join('')),
   };
   if (S.edit.under.some(r => r.some(ch => ch !== '.'))) def.under = S.edit.under.map(r => r.join(''));
+  if (S.edit.mix.some(r => r.some(ch => ch !== '.'))) def.mix = S.edit.mix.map(r => r.join(''));
   const tape = Math.max(0, Math.min(5, +$('editTape').value | 0));
   if (tape) def.tape = tape;
   return def;
@@ -672,7 +681,7 @@ function runEditAnalysis() {
     const b = parseLevel(def);
     const warn = [];
     const counts = new Array(6).fill(0);
-    b.tileColor.forEach((k, t) => { counts[k]++; if (b.underColor[t] !== k) counts[b.underColor[t]]++; });
+    b.tileColor.forEach((k, t) => { counts[k]++; if (b.underColor[t] !== k) counts[b.underColor[t]]++; if (b.mixColor[t] >= 0) counts[b.mixColor[t]]++; });
     counts.forEach((n, k) => { if (n === 1) warn.push(`${PIGMENTS[k]} has a single tile`); });
     const a = safeAnalyze(b, b.initHp, 3_000_000);
     S.edit.info = a;
@@ -771,7 +780,7 @@ function wire() {
     if (!btn) return;
     const def = allLevels().find(d => d.id === btn.dataset.id);
     if (!def) return;
-    if (S.mode === 'edit') { setEditRows(def.rows, def, def.under); renderBoard(); }
+    if (S.mode === 'edit') { setEditRows(def.rows, def, def.under, def.mix); renderBoard(); }
     else if (!isLocked(def)) loadLevel(def);
   });
 
@@ -792,15 +801,17 @@ function wire() {
   });
   $('varnishBrush').onchange = e => { S.edit.varnish = e.target.checked; renderPalette(); };
   $('underBrush').onchange = e => { S.edit.underBrush = e.target.value; renderPalette(); };
+  $('mixBrush').onchange = e => { S.edit.mixBrush = e.target.value; renderPalette(); };
   $('resize').onclick = () => {
     const w = Math.max(2, Math.min(12, +$('editW').value)), h = Math.max(2, Math.min(12, +$('editH').value));
     const old = S.edit.rows;
-    const oldU = S.edit.under;
+    const oldU = S.edit.under, oldM = S.edit.mix;
     S.edit.rows = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => old[y]?.[x] ?? '.'));
     S.edit.under = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => oldU[y]?.[x] ?? '.'));
+    S.edit.mix = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => oldM[y]?.[x] ?? '.'));
     S.edit.info = null; renderBoard();
   };
-  $('clearEdit').onclick = () => { S.edit.rows = S.edit.rows.map(r => r.map(() => '.')); S.edit.under = S.edit.under.map(r => r.map(() => '.')); S.edit.info = null; renderBoard(); };
+  $('clearEdit').onclick = () => { S.edit.rows = S.edit.rows.map(r => r.map(() => '.')); S.edit.under = S.edit.under.map(r => r.map(() => '.')); S.edit.mix = S.edit.mix.map(r => r.map(() => '.')); S.edit.info = null; renderBoard(); };
   $('analyze').onclick = runEditAnalysis;
   $('testPlay').onclick = () => loadLevel(editDef());
   $('saveLevel').onclick = async () => {
@@ -815,6 +826,7 @@ function wire() {
     const a = S.edit.info;
     const out = { id: def.name.toLowerCase().replace(/\W+/g, '-'), name: def.name, note: def.note, rows: def.rows };
     if (def.under) out.under = def.under;
+    if (def.mix) out.mix = def.mix;
     if (def.tape) out.tape = def.tape;
     if (a && a !== 'big' && a.solvable) out.par = a.minStrikes;
     $('json').value = JSON.stringify(out, null, 2);
@@ -824,7 +836,7 @@ function wire() {
       let d = JSON.parse($('json').value);
       if (d.levels) d = d.levels[0];
       parseLevel(d);
-      setEditRows(d.rows, d, d.under); renderBoard();
+      setEditRows(d.rows, d, d.under, d.mix); renderBoard();
     } catch (err) { $('editStats').innerHTML = `<dt style="grid-column:1/-1;color:var(--bad)">${escapeHtml(err.message)}</dt>`; }
   };
 

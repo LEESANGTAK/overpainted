@@ -37,6 +37,15 @@
       }
     },
     {
+      "id": "mix",
+      "name": "Mixed Paint",
+      "note": "One dab, two pigments.",
+      "ko": {
+        "name": "혼색",
+        "note": "한 덩이, 두 안료."
+      }
+    },
+    {
       "id": "tape",
       "name": "Masking Tape",
       "note": "A shield the restorer lays down.",
@@ -683,6 +692,166 @@
         "startSafe": 1,
         "optimalSolutions": 1,
         "states": 13
+      }
+    },
+    {
+      "id": "p-mix1",
+      "chapter": "mix",
+      "name": "Both Sides",
+      "note": "Mixed paint: red and blue in one dab. It pairs with either, or with both at once.",
+      "rows": [
+        ".AA.",
+        "..AB",
+        "..A."
+      ],
+      "mix": [
+        "..B.",
+        "....",
+        "...."
+      ],
+      "ko": {
+        "name": "양쪽 다",
+        "note": "혼색: 빨강과 파랑이 한 덩이에. 어느 쪽과도 짝이 됩니다. 둘 다와 한꺼번에도.",
+        "voice": {
+          "stuckAfterBait": "파랑에게만 줬지. 빨강도 기다리고 있었는데.",
+          "winAfterBait": "양쪽을 한꺼번에.",
+          "winClean": "둘 다에게 대답하게 했군."
+        }
+      },
+      "bait": [
+        3,
+        0
+      ],
+      "voice": {
+        "stuckAfterBait": "You gave it to the blue alone. A red was waiting too.",
+        "winAfterBait": "Both sides at once.",
+        "winClean": "You let it answer both."
+      },
+      "par": 2,
+      "metrics": {
+        "pRandom": 0.1667,
+        "trapBits": 2.58,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 7
+      }
+    },
+    {
+      "id": "p-mix2",
+      "chapter": "mix",
+      "name": "One Too Many",
+      "note": "Two colours in one strike is not always generous.",
+      "rows": [
+        "A...",
+        "..B.",
+        "A..A",
+        "..B."
+      ],
+      "mix": [
+        "....",
+        "....",
+        "B...",
+        "...."
+      ],
+      "ko": {
+        "name": "하나 더 많이",
+        "note": "한 번에 두 색이 늘 넉넉한 건 아닙니다.",
+        "voice": {
+          "stuckAfterBait": "한 번에 넷. 가져간 빨강은 다른 빨강의 짝이었지.",
+          "winAfterBait": "같은 자리. 이번엔 셋, 빨강은 빼고.",
+          "winClean": "빨강은 빨강에게 남겨 뒀군."
+        }
+      },
+      "bait": [
+        2,
+        2
+      ],
+      "voice": {
+        "stuckAfterBait": "Four at once. The red you took was the other red's partner.",
+        "winAfterBait": "Same spot. Three this time, and no red.",
+        "winClean": "You left the red for the red."
+      },
+      "par": 2,
+      "metrics": {
+        "pRandom": 0.0667,
+        "trapBits": 3.91,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 9
+      }
+    },
+    {
+      "id": "p-mix3",
+      "chapter": "mix",
+      "name": "Pick a Side",
+      "note": "A mixed dab goes one way only. Send it where it is needed.",
+      "rows": [
+        "AAB.",
+        "....",
+        "A..A"
+      ],
+      "mix": [
+        "B...",
+        "....",
+        "...."
+      ],
+      "ko": {
+        "name": "편 고르기",
+        "note": "혼색은 한쪽으로만 갈 수 있습니다. 필요한 쪽으로 보내세요.",
+        "voice": {
+          "stuckAfterBait": "빨강 편에 섰지. 파랑에겐 그밖에 없었는데.",
+          "winAfterBait": "빨강은 빨강끼리 해결했지.",
+          "winClean": "혼자인 쪽에 보냈군."
+        }
+      },
+      "bait": [
+        0,
+        1
+      ],
+      "voice": {
+        "stuckAfterBait": "It went red. The blue had no one else.",
+        "winAfterBait": "The reds took care of themselves.",
+        "winClean": "You sent it to the one alone."
+      },
+      "par": 2,
+      "metrics": {
+        "pRandom": 0.3333,
+        "trapBits": 1.58,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 6
+      }
+    },
+    {
+      "id": "p-mix4",
+      "chapter": "mix",
+      "name": "Two Mixes",
+      "note": "Two mixed dabs. They do not have to choose the same side.",
+      "rows": [
+        ".BB..",
+        "..B.A",
+        "...AA"
+      ],
+      "mix": [
+        ".....",
+        "....B",
+        "....B"
+      ],
+      "ko": {
+        "name": "두 혼색",
+        "note": "혼색이 둘. 같은 편을 고를 필요는 없습니다."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.1667,
+        "trapBits": 2.58,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 11
       }
     },
     {
