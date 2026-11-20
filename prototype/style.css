@@ -138,20 +138,29 @@ aside { overflow-y: auto; padding: 14px; background: var(--panel); }
 .tile.under.other { filter: none; }
 .tile.varnish.strip { animation: peel .28s ease-in forwards; }
 @keyframes peel { to { transform: translateY(-35%) rotate(-10deg) scale(1.2); opacity: 0; } }
-/* Old tape (`#`): masking tape someone laid on the canvas long ago. Same material as the player's
-   tape, but aged and crossed in an X, so it never reads as "mine, undo will take it off". */
-.oldtape { inset: 0; border-radius: 0; background: #0000; }
-.oldtape::before, .oldtape::after {
-  content: ''; position: absolute; left: -8%; right: -8%; top: 36%; bottom: 36%; border-radius: 1px;
-  background:
-    radial-gradient(40% 120% at 30% 50%, #6b553a2e, transparent 70%),
+/* Masking tape is always an X of two strips: the shape says "this cell is blocked, every way".
+   The colour says whose it is: old tape (`#`, laid long ago, never comes off) is faded and
+   stained paper; the player's own tape (undo takes it off, it counts as a move) is fresh cream. */
+.oldtape { inset: 0; border-radius: 0; background: #0000;
+  --tape-paper: radial-gradient(40% 120% at 30% 50%, #6b553a2e, transparent 70%),
     repeating-linear-gradient(90deg, #0000 0 2px, #00000012 2px 3px),
-    linear-gradient(#d3cbb6, #b9af98); /* faded paper, kept well away from the ochre pigment */
+    linear-gradient(#c6bea8, #a69c85); /* faded, greyed paper: away from the ochre pigment and from fresh tape */
+}
+.cell.taped .tape, #tapeTray .piece, .tape-ghost {
+  --tape-paper: repeating-linear-gradient(90deg, #0000 0 2px, #0000000a 2px 3px),
+    linear-gradient(#fbf3dc, #ece0b8); /* fresh roll: brighter and cleaner than old tape */
+}
+.oldtape::before, .oldtape::after,
+.cell.taped .tape::before, .cell.taped .tape::after,
+#tapeTray .piece::before, #tapeTray .piece::after,
+.tape-ghost::before, .tape-ghost::after {
+  content: ''; position: absolute; left: -8%; right: -8%; top: 36%; bottom: 36%; border-radius: 1px;
+  background: var(--tape-paper);
   box-shadow: 0 1px 2px #0008;
   clip-path: polygon(1% 0, 99% 6%, 100% 40%, 98% 70%, 100% 100%, 2% 94%, 0 60%, 2% 30%);
 }
-.oldtape::before { transform: rotate(45deg); }
-.oldtape::after { transform: rotate(-45deg); }
+.oldtape::before, .cell.taped .tape::before, #tapeTray .piece::before, .tape-ghost::before { transform: rotate(45deg); }
+.oldtape::after, .cell.taped .tape::after, #tapeTray .piece::after, .tape-ghost::after { transform: rotate(-45deg); }
 .tile.dissolve { transform: scale(.4) rotate(8deg); opacity: 0; filter: blur(3px) saturate(2); }
 .tile.strip { animation: strip .3s; }
 @keyframes strip { 50% { filter: brightness(1.8); transform: scale(.92); } }
@@ -160,18 +169,11 @@ aside { overflow-y: auto; padding: 14px; background: var(--panel); }
   color: var(--bad); font-size: calc(var(--s) * .5); animation: fade .5s forwards;
 }
 @keyframes fade { to { opacity: 0; } }
-/* Masking tape the player lays: one fresh strip across an empty cell (old tape is an aged X). */
-.cell.taped .tape {
-  position: absolute; inset: 22% -6%; transform: rotate(-9deg); border-radius: 1px;
-  background:
-    repeating-linear-gradient(90deg, #0000 0 2px, #0000000d 2px 3px),
-    linear-gradient(#efe4c4f0, #dccd9ef0);
-  box-shadow: 0 1px 3px #0007;
-  clip-path: polygon(2% 0, 98% 4%, 100% 30%, 97% 55%, 100% 100%, 3% 96%, 0 70%, 3% 40%);
-}
+/* the player's own tape on the board (an X, see above) */
+.cell.taped .tape { position: absolute; inset: 0; }
 #board.taping .cell.empty { cursor: copy; }
 #board.taping .cell.empty::after {
-  content: ''; position: absolute; inset: 30% 6%; border: 1px dashed #efe4c499; border-radius: 1px; transform: rotate(-9deg);
+  content: ''; position: absolute; inset: 14%; border: 1px dashed #fbf3dc99; border-radius: 2px;
 }
 /* the tape tray left of the canvas, and the piece being dragged */
 #boardRow { display: flex; align-items: flex-start; gap: 14px; }
@@ -181,20 +183,14 @@ aside { overflow-y: auto; padding: 14px; background: var(--panel); }
   background: linear-gradient(#2c2218, #1b150e); border: 1px solid #5c4628; box-shadow: 0 6px 18px #0008;
 }
 #tapeTray[hidden] { display: none; }
-#tapeTray .piece, .tape-ghost {
-  background:
-    repeating-linear-gradient(90deg, #0000 0 2px, #0000000d 2px 3px),
-    linear-gradient(#efe4c4, #dccd9e);
-  box-shadow: 0 1px 3px #0007;
-  clip-path: polygon(2% 0, 98% 4%, 100% 30%, 97% 55%, 100% 100%, 3% 96%, 0 70%, 3% 40%);
-}
-#tapeTray .piece { width: 44px; height: 18px; transform: rotate(-9deg); cursor: grab; touch-action: none; transition: transform .15s, opacity .15s; }
-#tapeTray .piece:hover { transform: rotate(-9deg) scale(1.08); }
-#tapeTray .piece.used { background: none; box-shadow: none; clip-path: none; outline: 1px dashed #efe4c440; cursor: default; }
+#tapeTray .piece { position: relative; width: 34px; height: 34px; cursor: grab; touch-action: none; transition: transform .15s, opacity .15s; }
+#tapeTray .piece:hover { transform: scale(1.1); }
+#tapeTray .piece.used { outline: 1px dashed #fbf3dc40; outline-offset: -3px; cursor: default; }
+#tapeTray .piece.used::before, #tapeTray .piece.used::after { content: none; }
 #tapeTray .piece.lifted { opacity: .25; }
-#tapeTray.armed .piece:not(.used) { outline: 2px solid var(--accent); outline-offset: 2px; clip-path: none; }
+#tapeTray.armed .piece:not(.used) { outline: 2px solid var(--accent); outline-offset: 3px; }
 #tapeTray.off .piece { cursor: default; }
-.tape-ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -50%) rotate(-9deg); opacity: .75; box-shadow: 0 8px 18px #000a; }
+.tape-ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -50%); opacity: .75; filter: drop-shadow(0 8px 10px #000a); }
 .tape-ghost.ok { opacity: 1; }
 .cell.drop::after { content: ''; position: absolute; inset: 3px; border: 2px dashed var(--accent); border-radius: 2px; }
 .cell.hint::before {
@@ -323,7 +319,7 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
   #controls { gap: 8px; width: 100%; justify-content: center; }
   #boardRow { gap: 8px; }
   #tapeTray { padding: 10px 6px; gap: 12px; }
-  #tapeTray .piece { width: 36px; height: 15px; }
+  #tapeTray .piece { width: 28px; height: 28px; }
   #controls button { padding: 8px 16px; min-height: 38px; font-size: 14px; }
   #voice { margin-top: 12px; font-size: 14px; padding: 8px 12px 8px 14px; }
 

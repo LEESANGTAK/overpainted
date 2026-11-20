@@ -384,25 +384,27 @@ function trayDown(e) {
   const lift = e.pointerType === 'mouse' ? 0 : Math.round(S.size * .8 + 28);
   let ghost = null, over = -1;
   const mark = c => { cellEl(over)?.classList.remove('drop'); over = c; cellEl(over)?.classList.add('drop'); };
+  const target = ev => { // the empty cell under the piece (not under a finger), or -1
+    const el = document.elementFromPoint(ev.clientX, ev.clientY - lift)?.closest('#board .cell');
+    const c = el ? +el.dataset.c : -1;
+    return c >= 0 && canTape(S.board, S.hp, c) ? c : -1;
+  };
   const move = ev => {
     if (!ghost && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;
     if (!ghost) {
       ghost = document.createElement('div');
       ghost.className = 'tape-ghost';
-      ghost.style.width = Math.round(S.size * 1.1) + 'px';
-      ghost.style.height = Math.round(S.size * .5) + 'px';
+      ghost.style.width = S.size + 'px'; // cell-sized: the X you drag is the X that lands
+      ghost.style.height = S.size + 'px';
       document.body.append(ghost);
       piece.classList.add('lifted');
       S.tapeMode = false; $('board').classList.remove('taping');
     }
-    const px = ev.clientX, py = ev.clientY - lift;
-    ghost.style.left = px + 'px';
-    ghost.style.top = py + 'px';
-    const el = document.elementFromPoint(px, py)?.closest('#board .cell');
-    const c = el ? +el.dataset.c : -1;
-    const ok = c >= 0 && canTape(S.board, S.hp, c);
-    if ((ok ? c : -1) !== over) mark(ok ? c : -1);
-    ghost.classList.toggle('ok', ok);
+    ghost.style.left = ev.clientX + 'px';
+    ghost.style.top = ev.clientY - lift + 'px';
+    const c = target(ev);
+    if (c !== over) mark(c);
+    ghost.classList.toggle('ok', c >= 0);
   };
   const end = ev => {
     window.removeEventListener('pointermove', move);
@@ -411,7 +413,7 @@ function trayDown(e) {
     if (!ghost) { if (ev.type === 'pointerup') toggleTape(); return; } // a click, not a drag
     ghost.remove();
     piece.classList.remove('lifted');
-    const c = over;
+    const c = target(ev); // where it is let go, not where it last moved
     mark(-1);
     if (c >= 0 && ev.type === 'pointerup') placeTape(c, 'drag');
   };

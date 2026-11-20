@@ -691,6 +691,58 @@
       }
     },
     {
+      "id": "p-inplace",
+      "chapter": "tape",
+      "name": "In Its Place",
+      "note": "Some shields have to go. Their place does not have to open.",
+      "rows": [
+        "..BB",
+        ".ACB",
+        "..A.",
+        "C.B."
+      ],
+      "tape": 1,
+      "ko": {
+        "name": "그 자리에",
+        "note": "어떤 방패는 치워야 합니다. 그 자리까지 열어 둘 필요는 없습니다."
+      },
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0024,
+        "trapBits": 8.73,
+        "startMoves": 10,
+        "startSafe": 1,
+        "optimalSolutions": 2,
+        "states": 105
+      }
+    },
+    {
+      "id": "p-waitcoat",
+      "chapter": "tape",
+      "name": "Wait for the Coat",
+      "note": "Tape blocks every look, even the ones you still need.",
+      "rows": [
+        "...CB",
+        "..A.A",
+        ".B..C",
+        "..aCC"
+      ],
+      "tape": 1,
+      "ko": {
+        "name": "두 겹을 기다려",
+        "note": "테이프는 모든 시선을 막습니다. 아직 필요한 시선까지도."
+      },
+      "par": 6,
+      "metrics": {
+        "pRandom": 0.0003,
+        "trapBits": 11.71,
+        "startMoves": 14,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 288
+      }
+    },
+    {
       "id": "p-chain",
       "chapter": "together",
       "name": "Chain",
