@@ -374,30 +374,80 @@
       "par": 4
     },
     {
-      "id": "p-09",
+      "id": "p-twice",
       "chapter": "coat",
-      "name": "Fragment 9",
+      "name": "Twice",
       "note": "Double coat: it takes two matches. The first only lifts the top coat.",
       "rows": [
-        "..B...",
-        "....C.",
-        "...C.a",
-        ".B.C..",
-        ".C...C",
-        "bbBBAA"
+        "aAAA",
+        "....",
+        "...A"
       ],
-      "par": 7,
-      "metrics": {
-        "pRandom": 0.0042,
-        "trapBits": 7.88,
-        "startMoves": 12,
-        "startSafe": 4,
-        "optimalSolutions": 35,
-        "states": 745
-      },
       "ko": {
-        "name": "조각 9",
-        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+        "name": "두 번",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다.",
+        "voice": {
+          "stuckAfterBait": "그 둘은 두 겹의 짝이었지.",
+          "winAfterBait": "두 겹에겐 둘 다 필요했지.",
+          "winClean": "두 겹, 짝 둘, 창 하나."
+        }
+      },
+      "bait": [
+        3,
+        1
+      ],
+      "voice": {
+        "stuckAfterBait": "Those two were its partners.",
+        "winAfterBait": "The coat needed both of them.",
+        "winClean": "Two coats, two partners, one window."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.25,
+        "trapBits": 2,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 8
+      }
+    },
+    {
+      "id": "p-count",
+      "chapter": "coat",
+      "name": "Count the Coats",
+      "note": "Five tiles. Count again.",
+      "rows": [
+        "B...",
+        "..bB",
+        "...B",
+        "..B."
+      ],
+      "ko": {
+        "name": "겹을 세라",
+        "note": "다섯 장. 다시 세어 보세요.",
+        "voice": {
+          "stuckAfterBait": "다섯 장이니 셋을 한꺼번에? 겹을 셌어야지.",
+          "winAfterBait": "같은 자리. 이번엔 둘만, 그래야 했지.",
+          "winClean": "장이 아니라 겹을 셌군."
+        }
+      },
+      "bait": [
+        2,
+        2
+      ],
+      "voice": {
+        "stuckAfterBait": "Five tiles, so three at once? Count the coats.",
+        "winAfterBait": "Same spot. Two this time, as it should be.",
+        "winClean": "You counted the coats, not the tiles."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.0556,
+        "trapBits": 4.17,
+        "startMoves": 6,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 13
       }
     },
     {
@@ -426,6 +476,33 @@
       }
     },
     {
+      "id": "p-09",
+      "chapter": "coat",
+      "name": "Fragment 9",
+      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "rows": [
+        "..B...",
+        "....C.",
+        "...C.a",
+        ".B.C..",
+        ".C...C",
+        "bbBBAA"
+      ],
+      "par": 7,
+      "metrics": {
+        "pRandom": 0.0042,
+        "trapBits": 7.88,
+        "startMoves": 12,
+        "startSafe": 4,
+        "optimalSolutions": 35,
+        "states": 745
+      },
+      "ko": {
+        "name": "조각 9",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
       "id": "p-10",
       "chapter": "coat",
       "name": "Fragment 10",
@@ -450,7 +527,9 @@
       "ko": {
         "name": "조각 10",
         "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
-      }
+      },
+      "extra": true,
+      "parent": "p-09"
     },
     {
       "id": "p-under",
