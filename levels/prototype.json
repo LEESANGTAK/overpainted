@@ -563,6 +563,51 @@
       }
     },
     {
+      "id": "p-onemore",
+      "chapter": "under",
+      "name": "One More Below",
+      "note": "Count what lies beneath. Sometimes it makes three.",
+      "rows": [
+        "AAa.",
+        "...B",
+        "..B.",
+        "...A"
+      ],
+      "under": [
+        "..B.",
+        "....",
+        "....",
+        "...."
+      ],
+      "ko": {
+        "name": "하나 더, 아래에",
+        "note": "아래에 깔린 것까지 세어 보세요. 셋이 될 때도 있습니다.",
+        "voice": {
+          "stuckAfterBait": "파랑 둘이 만났지. 빨강 밑의 하나는 혼자 올라왔고.",
+          "winAfterBait": "같은 자리. 빨강이 비켜서자 셋이었지.",
+          "winClean": "세 번째를 기다렸군."
+        }
+      },
+      "bait": [
+        2,
+        1
+      ],
+      "voice": {
+        "stuckAfterBait": "Two blues met. The one under the red came up alone.",
+        "winAfterBait": "Same spot. Once the red stepped aside, three.",
+        "winClean": "You waited for the third."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.0556,
+        "trapBits": 4.17,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 11
+      }
+    },
+    {
       "id": "p-peel",
       "chapter": "under",
       "name": "Peel Together",
