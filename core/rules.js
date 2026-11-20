@@ -14,6 +14,13 @@
 // non-empty cell in each direction (gold leaf stops the look and yields nothing).
 // Among those (up to 4) tiles, every tile whose pigment appears 2+ times loses one layer.
 // A strike that hits nothing is a no-op. The level is cleared when no paint tiles remain.
+//
+// Masking tape (optional `tape: N` on a level): the player may tape up to N cells that are
+// empty right now. A taped cell blocks the line of sight like gold leaf and can no longer be
+// struck. Tape stays on (only undo takes it off) and is not a strike.
+//
+// State (`hp`): one byte per tile = layers left. On a level with tape, w*h more bytes follow,
+// one per cell: 1 = taped. Use board.nTiles (not hp.length) to walk the tiles.
 
 export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // up, right, down, left
 export const COLOR_CHARS = 'ABCDEF';
@@ -29,6 +36,7 @@ export function parseLevel(def) {
   const under = def.under;
   if (under != null && (!Array.isArray(under) || under.length !== h)) throw new Error('`under` must have one row per row');
   const tileCell = [], tileColor = [], underColor = [], initHp = [];
+  const tape = Math.max(0, def.tape | 0);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const ch = rows[y][x] ?? '.';
@@ -56,8 +64,9 @@ export function parseLevel(def) {
     tileCell: Int32Array.from(tileCell),
     tileColor: Uint8Array.from(tileColor),   // pigment of the top coat (the only coat for single tiles)
     underColor: Uint8Array.from(underColor), // pigment once the top coat is gone (= tileColor unless undercoated)
-    initHp: Uint8Array.from(initHp),
+    initHp: Uint8Array.from(tape > 0 ? [...initHp, ...new Array(w * h).fill(0)] : initHp),
     nTiles: tileCell.length,
+    tape, // masking tape the player may use (0 = none)
   };
 }
 
@@ -105,8 +114,33 @@ export function toUnder(board, hp = board.initHp) {
   return any ? rows : null;
 }
 
+/** True if cell c carries masking tape in state hp. */
+export function isTaped(board, hp, c) {
+  return board.tape > 0 && hp[board.nTiles + c] === 1;
+}
+
+/** Tape the player still has in state hp. */
+export function tapeLeft(board, hp) {
+  if (!board.tape) return 0;
+  let used = 0;
+  for (let i = board.nTiles; i < hp.length; i++) used += hp[i];
+  return board.tape - used;
+}
+
+/** True if tape can go on cell c now (an empty, untaped cell, with tape left). */
+export function canTape(board, hp, c) {
+  return tapeLeft(board, hp) > 0 && isEmpty(board, hp, c);
+}
+
+/** New state with cell c taped. */
+export function applyTape(board, hp, c) {
+  const n = hp.slice();
+  n[board.nTiles + c] = 1;
+  return n;
+}
+
 export function isEmpty(board, hp, c) {
-  if (board.blocked[c]) return false;
+  if (board.blocked[c] || isTaped(board, hp, c)) return false;
   const t = board.tileAt[c];
   return t < 0 || hp[t] === 0;
 }
@@ -126,7 +160,7 @@ export function probe(board, hp, cell) {
     let x = x0 + dx, y = y0 + dy, end = -1, tile = -1, wall = false;
     while (x >= 0 && y >= 0 && x < w && y < h) {
       const c = y * w + x;
-      if (board.blocked[c]) { end = c; wall = true; break; }
+      if (board.blocked[c] || isTaped(board, hp, c)) { end = c; wall = true; break; }
       const t = board.tileAt[c];
       if (t >= 0 && hp[t] > 0) { end = c; tile = t; break; }
       x += dx; y += dy;
@@ -154,14 +188,22 @@ export function applyHits(hp, hits) {
   return n;
 }
 
-export function isClear(hp) {
-  for (let i = 0; i < hp.length; i++) if (hp[i]) return false;
+/** No paint left. `n` = board.nTiles on a level with tape (the tape bytes are not paint). */
+export function isClear(hp, n = hp.length) {
+  for (let i = 0; i < n; i++) if (hp[i]) return false;
   return true;
 }
 
-export function tilesLeft(hp) {
+export function tilesLeft(hp, n = hp.length) {
   let s = 0;
-  for (let i = 0; i < hp.length; i++) if (hp[i] > 0) s++;
+  for (let i = 0; i < n; i++) if (hp[i] > 0) s++;
+  return s;
+}
+
+/** Paint layers left. */
+export function layersLeft(board, hp) {
+  let s = 0;
+  for (let i = 0; i < board.nTiles; i++) s += hp[i];
   return s;
 }
 

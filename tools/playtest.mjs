@@ -8,7 +8,7 @@
 // *blunders* (the strike that made the level unwinnable) and how long the player took to notice.
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { parseLevel, probe, applyHits } from '../core/rules.js';
+import { parseLevel, probe, applyHits, applyTape, canTape, isClear } from '../core/rules.js';
 import { analyze, SearchLimit } from '../core/solver.js';
 
 const root = resolve(import.meta.dirname, '..');
@@ -28,9 +28,9 @@ const order = [...shipped.keys()];
 
 // ---------- solver cache: remaining optimal strikes from a position (Infinity = lost) ----------
 const boards = new Map();
-function boardFor(id, rows, under = null) {
-  const key = id + '|' + rows.join('/') + '|' + (under ?? []).join('/');
-  if (!boards.has(key)) boards.set(key, { board: parseLevel({ rows, under }), f: new Map() });
+function boardFor(id, rows, under = null, tape = 0) {
+  const key = id + '|' + rows.join('/') + '|' + (under ?? []).join('/') + '|' + tape;
+  if (!boards.has(key)) boards.set(key, { board: parseLevel({ rows, under, tape }), f: new Map() });
   return boards.get(key);
 }
 function remaining(B, hp) {
@@ -79,7 +79,7 @@ for (const file of files) {
     if (e.type === 'level_start') {
       const def = shipped.get(e.lvl) ?? { id: e.lvl, name: e.lvl, rows: e.rows, par: e.par };
       const src = shipped.get(e.lvl) ?? e;
-      const B = boardFor(e.lvl, src.rows, src.under);
+      const B = boardFor(e.lvl, src.rows, src.under, src.tape ?? 0);
       const L = agg(e.lvl, def);
       L.visits++;
       if (dev || e.dev) L.devUsed = true;
@@ -110,9 +110,29 @@ for (const file of files) {
           if (after === before - 1) { L.optimalStrikes++; verdict = 'optimal'; }
           if (after === Infinity) { L.blunders++; verdict = 'BLUNDER'; cur.lostAt = { t: cur.active, strikes: 0 }; }
         } else if (before === Infinity) { verdict = 'lost'; if (cur.lostAt) cur.lostAt.strikes++; }
-        const dead = after === Infinity && r && next.some(v => v > 0) && !anyMove(B.board, next);
+        const dead = after === Infinity && r && !isClear(next, B.board.nTiles) && !anyMove(B.board, next);
         if (dead) L.deadEnds++;
         tl('strike', { cell: e.cell, cleared: r.hits.length, think: +(think / 1000).toFixed(1), left: after === Infinity ? 'LOST' : after, verdict, ...(dead ? { deadEnd: true } : {}) });
+        break;
+      }
+      case 'tape': { // masking tape: a move like a strike (judged the same way), never a dead end by itself
+        if (e.replay) { L.replayUsed = true; break; }
+        const think = cur.sinceMove; cur.sinceMove = 0;
+        L.thinkMs.push(think);
+        if (cur.firstMove) { L.firstThinkMs.push(think); cur.firstMove = false; }
+        L.strikes++;
+        if (!canTape(B.board, cur.hp, e.cell)) { tl('tape?', { cell: e.cell }); break; }
+        const before = remaining(B, cur.hp);
+        const next = applyTape(B.board, cur.hp, e.cell);
+        const after = remaining(B, next);
+        cur.hist.push(cur.hp); cur.hp = next;
+        let verdict = 'ok';
+        if (before != null && after != null && before !== Infinity) {
+          L.judgedStrikes++;
+          if (after === before - 1) { L.optimalStrikes++; verdict = 'optimal'; }
+          if (after === Infinity) { L.blunders++; verdict = 'BLUNDER'; cur.lostAt = { t: cur.active, strikes: 0 }; }
+        } else if (before === Infinity) { verdict = 'lost'; if (cur.lostAt) cur.lostAt.strikes++; }
+        tl('tape', { cell: e.cell, think: +(think / 1000).toFixed(1), left: after === Infinity ? 'LOST' : after, verdict });
         break;
       }
       case 'undo':

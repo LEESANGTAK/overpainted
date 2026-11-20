@@ -1,4 +1,4 @@
-import { parseLevel, probe, applyHits, isClear, tilesLeft, listMoves, toRows, toUnder, COLOR_CHARS } from '../core/rules.js';
+import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { t, lt, applyStatic, toggleLang } from './i18n.js';
@@ -169,6 +169,7 @@ function renderBoard() {
   const s = S.size = fitSize(b.w, b.h);
   const el = $('board');
   el.classList.toggle('edit', S.mode === 'edit');
+  el.classList.toggle('taping', S.mode === 'play' && !!S.tapeMode);
   el.style.setProperty('--s', s + 'px');
   el.style.gridTemplateColumns = `repeat(${b.w}, ${s}px)`;
   el.style.gridAutoRows = s + 'px';
@@ -176,6 +177,7 @@ function renderBoard() {
   let html = '';
   for (let c = 0; c < b.w * b.h; c++) {
     if (b.blocked[c]) { html += `<div class="cell" data-c="${c}"><div class="gold"></div></div>`; continue; }
+    if (isTaped(b, hp, c)) { html += `<div class="cell taped" data-c="${c}"><div class="tape"></div></div>`; continue; }
     const t = b.tileAt[c];
     if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t]) : tileHtml(b.underColor[t], false)}</div>`;
     else html += `<div class="cell empty${c === S.hintCell ? ' hint' : ''}" data-c="${c}"></div>`;
@@ -225,6 +227,13 @@ function nextMain(def) { // next main level after this one (for an extra: after 
   return i < 0 ? null : S.levels.slice(i + 1).find(d => !d.extra) ?? null;
 }
 
+// Chapters group the main course by mechanic (levels/prototype.json `chapters`, each level has `chapter`).
+// All chapters stay open in the prototype: testers may skip ahead, and that is data too.
+const chapterOf = def => S.chapters.find(c => c.id === def?.chapter) ?? null;
+const chapterNo = ch => S.chapters.indexOf(ch) + 1;
+const mainsOf = ch => S.levels.filter(d => d.chapter === ch.id && !d.extra);
+const chapterCleared = ch => mainsOf(ch).every(d => store.best[d.id] != null);
+
 function renderList() {
   const el = $('levelList');
   const item = (def, custom) => {
@@ -236,7 +245,13 @@ function renderList() {
     const tip = locked ? ` title="${escapeHtml(t('unlockHint', { name: lt(S.levels.find(d => d.id === def.parent) ?? {}, 'name') }))}"` : '';
     return `<button class="lvl${def.extra ? ' extra' : ''}${locked ? ' locked' : ''}${active}" data-id="${def.id}" data-custom="${custom ? 1 : ''}"${tip}><span>${name}</span>${meta}</button>`;
   };
-  el.innerHTML = `<h3>${t('listProto')}</h3>` + S.levels.map(d => item(d, false)).join('') +
+  const head = ch => {
+    const mains = mainsOf(ch), done = mains.filter(d => store.best[d.id] != null).length;
+    return `<h3 class="chapter${done === mains.length ? ' done' : ''}"><span>${chapterNo(ch)} · ${escapeHtml(lt(ch, 'name'))}</span><small>${done}/${mains.length}</small></h3>`;
+  };
+  const loose = S.levels.filter(d => !chapterOf(d)); // a level not yet put in a chapter
+  el.innerHTML = S.chapters.map(ch => head(ch) + S.levels.filter(d => d.chapter === ch.id).map(d => item(d, false)).join('')).join('') +
+    (loose.length ? `<h3>${t('listProto')}</h3>` + loose.map(d => item(d, false)).join('') : '') +
     `<h3>${t('listMine')}</h3>` + (store.custom.length ? store.custom.map(d => item(d, true)).join('') : `<small style="color:var(--muted)">${t('makeOne')}</small>`);
   el.querySelector('.lvl.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
@@ -244,15 +259,21 @@ function renderList() {
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 function updateHud() {
-  const strikes = S.hist.length;
+  const strikes = S.hist.length; // tape counts as a move too
   $('strikes').textContent = strikes;
+  $('strikesLabel').textContent = t(S.board.tape ? 'moves' : 'strikes');
+  const tb = $('tapeBtn'), left = tapeLeft(S.board, S.hp);
+  tb.hidden = !S.board.tape;
+  tb.textContent = t('tape', { n: left });
+  tb.disabled = !left || S.won;
+  tb.classList.toggle('active', !!S.tapeMode);
   $('par').textContent = S.def.par ?? S.levelInfo?.minStrikes ?? '–';
-  $('left').textContent = S.hp.reduce((a, v) => a + v, 0);
+  $('left').textContent = layersLeft(S.board, S.hp);
   const st = $('status');
   st.className = '';
   st.textContent = '';
   if (S.won) return;
-  if (!isClear(S.hp) && listMoves(S.board, S.hp).length === 0) {
+  if (!isClear(S.hp, S.board.nTiles) && listMoves(S.board, S.hp).length === 0) { // tape never makes a strike
     st.textContent = t('deadEnd');
     if (S.attemptBait) say('stuckAfterBait');
     st.className = 'bad';
@@ -312,7 +333,7 @@ function loadLevel(def) {
   S.def = def;
   S.board = parseLevel(def);
   S.hp = S.board.initHp.slice();
-  S.hist = []; S.won = false; S.hints = 0; S.hintCell = -1; S.busy = false; S.queued = null;
+  S.hist = []; S.won = false; S.hints = 0; S.hintCell = -1; S.busy = false; S.queued = null; S.tapeMode = false;
   S.gen = (S.gen ?? 0) + 1; // a strike still animating from the previous level checks this and drops out
   // the overpainter's bait for this level (if any): the move a click on def.bait makes at the start
   S.baitKey = def.bait ? probe(S.board, S.board.initHp, def.bait[1] * S.board.w + def.bait[0])?.hits.join(',') : null;
@@ -323,15 +344,37 @@ function loadLevel(def) {
   S.nowInfo = S.levelInfo;
   $('levelName').textContent = lt(def, 'name');
   $('levelNote').textContent = lt(def, 'note') || '';
+  showChapter();
   $('overlay').hidden = true;
   showMode();
   renderBoard(); renderList(); updateHud(); renderDev();
-  log('level_start', { rows: def.rows, under: def.under, par: def.par ?? null, dev: S.dev });
+  log('level_start', { chapter: def.chapter ?? null, rows: def.rows, under: def.under, tape: def.tape || undefined, par: def.par ?? null, dev: S.dev });
   try { localStorage.setItem(STORE_KEY + '.last', def.id); } catch { }
+}
+
+// Masking tape: T (or the Tape button) arms it, the next click on an empty cell tapes that cell.
+function toggleTape() {
+  if (S.mode !== 'play' || S.won || S.busy || !S.board.tape) return;
+  if (!S.tapeMode && tapeLeft(S.board, S.hp) <= 0) return;
+  S.tapeMode = !S.tapeMode;
+  renderBoard(); updateHud();
+}
+function placeTape(c) {
+  S.tapeMode = false;
+  if (!canTape(S.board, S.hp, c)) { renderBoard(); updateHud(); return; }
+  if (!S.hist.length && !S.replaying) S.attemptBait = false;
+  S.hintCell = -1;
+  clearRays();
+  log('tape', { cell: c, replay: !!S.replaying || undefined });
+  S.hist.push(S.hp);
+  S.hp = applyTape(S.board, S.hp, c);
+  renderBoard();
+  afterMove();
 }
 
 async function strikeAt(c) {
   if (S.won) return;
+  if (S.tapeMode && !S.busy) return placeTape(c);
   if (S.busy) { S.queued = c; return; } // fast players: run it right after the animation
   const r = probe(S.board, S.hp, c);
   if (!r) return;
@@ -367,7 +410,7 @@ async function strikeAt(c) {
 }
 
 function afterMove() {
-  if (isClear(S.hp)) return win();
+  if (isClear(S.hp, S.board.nTiles)) return win();
   updateHud();
   if (S.dev) refreshNow(); else S.nowInfo = null;
 }
@@ -377,19 +420,25 @@ function win() {
   S.nowInfo = null; renderDev();
   const strikes = S.hist.length, par = S.def.par;
   const prev = store.best[S.def.id];
+  const ch = chapterOf(S.def), chWasDone = ch && chapterCleared(ch);
   if (prev == null || strikes < prev) { store.best[S.def.id] = strikes; saveStore(); }
   log('win', { strikes, par: par ?? null, hints: S.hints });
   const custom = store.custom.includes(S.def);
   const list = allLevels();
   const next = custom ? list[list.indexOf(S.def) + 1] : nextMain(S.def);
   const extra = custom ? null : extrasOf(S.def)[0]; // just opened by this clear
+  const chJustDone = ch && !S.def.extra && !chWasDone && chapterCleared(ch);
+  const nextCh = next && !custom ? chapterOf(next) : null;
+  const nextLabel = nextCh && nextCh !== ch ? t('nextChapter', { n: chapterNo(nextCh), name: lt(nextCh, 'name') }) : t('next');
+  if (chJustDone) log('chapter_clear', { chapter: ch.id });
   $('overlay').innerHTML = `<div>
     <h2>${t('restored')}</h2>
     <div class="stars">${stars(strikes, par)}</div>
-    <p>${t('result', { s: strikes, p: par ?? '?' })}${S.hints ? t('hints', { n: S.hints }) : ''}</p>
+    <p>${t(S.board.tape ? 'resultMoves' : 'result', { s: strikes, p: par ?? '?' })}${S.hints ? t('hints', { n: S.hints }) : ''}</p>
+    ${chJustDone ? `<p class="chapter-done">${t('chapterDone', { n: chapterNo(ch), name: lt(ch, 'name') })}</p>` : ''}
     <button id="ovRetry">${t('retry')}</button>
     ${extra ? `<button id="ovExtra" class="extra${next ? '' : ' primary'}">${t('extra')}: ${escapeHtml(lt(extra, 'name'))}</button>` : ''}
-    ${next && S.def.id !== 'edit-test' ? `<button id="ovNext" class="primary">${t('next')}</button>` : ''}
+    ${next && S.def.id !== 'edit-test' ? `<button id="ovNext" class="primary">${escapeHtml(nextLabel)}</button>` : ''}
     ${S.def.id === 'edit-test' ? `<button id="ovEdit" class="primary">${t('backEditor')}</button>` : ''}
   </div>`;
   if (S.baitKey) say(S.fell ? 'winAfterBait' : 'winClean');
@@ -453,7 +502,7 @@ function say(trigger) {
 function undo() {
   if (S.busy || !S.hist.length || S.mode !== 'play') return;
   log('undo', { wasWon: S.won || undefined });
-  S.hp = S.hist.pop(); S.won = false; S.hintCell = -1;
+  S.hp = S.hist.pop(); S.won = false; S.hintCell = -1; S.tapeMode = false;
   if (!S.hist.length) S.attemptBait = false;
   $('overlay').hidden = true;
   renderBoard(); afterMove();
@@ -461,7 +510,7 @@ function undo() {
 function restart() {
   if (S.busy || S.mode !== 'play') return;
   log('restart', { strikes: S.hist.length, wasWon: S.won || undefined });
-  S.hp = S.board.initHp.slice(); S.hist = []; S.won = false; S.hintCell = -1; S.attemptBait = false;
+  S.hp = S.board.initHp.slice(); S.hist = []; S.won = false; S.hintCell = -1; S.attemptBait = false; S.tapeMode = false;
   $('overlay').hidden = true;
   renderBoard(); afterMove();
 }
@@ -475,11 +524,12 @@ function hint() {
     catch { $('status').textContent = t('hintTooBig'); return; }
   } else if (a.solvable) first = a.solution[0];
   else lost = true;
-  log('hint', lost ? { lost: true } : { cell: first.cell });
+  log('hint', lost ? { lost: true } : { cell: first.cell, tape: first.tape || undefined });
   if (lost) { $('status').textContent = t('hintLost'); $('status').className = 'bad'; return; }
   S.hints++;
   S.hintCell = first.cell;
   cellEl(first.cell)?.classList.add('hint');
+  if (first.tape) { $('status').textContent = t('hintTape'); $('status').className = ''; }
 }
 
 async function replaySolution() {
@@ -491,7 +541,7 @@ async function replaySolution() {
     await sleep(300);
     for (const st of S.levelInfo.solution) {
       if (S.mode !== 'play') return;
-      await strikeAt(st.cell);
+      if (st.tape) placeTape(st.cell); else await strikeAt(st.cell);
       await sleep(380);
     }
   } finally { S.replaying = false; }
@@ -511,7 +561,7 @@ function setEditRows(rows, def, under = null) {
   S.edit.under = rows.map((_, y) => (under?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
   S.edit.info = null;
   $('editW').value = w; $('editH').value = rows.length;
-  if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; }
+  if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; $('editTape').value = def.tape ?? 0; }
   $('editStats').innerHTML = '';
 }
 function renderPalette() {
@@ -542,6 +592,8 @@ function editDef() {
     rows: S.edit.rows.map(r => r.join('')),
   };
   if (S.edit.under.some(r => r.some(ch => ch !== '.'))) def.under = S.edit.under.map(r => r.join(''));
+  const tape = Math.max(0, Math.min(5, +$('editTape').value | 0));
+  if (tape) def.tape = tape;
   return def;
 }
 function runEditAnalysis() {
@@ -594,6 +646,13 @@ function showMode() {
   $('overlay').hidden = edit || !S.won;
   if (edit) { $('levelName').textContent = t('editorTitle'); $('levelNote').textContent = t('editorNote'); $('voice').hidden = true; }
   else if (S.def) { $('levelName').textContent = lt(S.def, 'name'); $('levelNote').textContent = lt(S.def, 'note') || ''; }
+  showChapter();
+}
+
+function showChapter() {
+  const ch = S.mode === 'play' ? chapterOf(S.def) : null;
+  $('levelChapter').textContent = ch ? t('chapterLabel', { n: chapterNo(ch), name: lt(ch, 'name') }) : '';
+  $('levelChapter').hidden = !ch;
 }
 
 function allLevels() { return [...S.levels, ...store.custom]; }
@@ -647,6 +706,8 @@ function wire() {
   });
 
   $('undo').onclick = undo;
+  $('tapeBtn').onclick = toggleTape;
+  $('editTape').onchange = () => { S.edit.info = null; };
   $('restart').onclick = restart;
   $('hint').onclick = hint;
   $('devToggle').onchange = e => { S.dev = e.target.checked; log('dev', { on: S.dev }); if (S.dev) refreshNow(); renderDev(); updateHud(); };
@@ -684,6 +745,7 @@ function wire() {
     const a = S.edit.info;
     const out = { id: def.name.toLowerCase().replace(/\W+/g, '-'), name: def.name, note: def.note, rows: def.rows };
     if (def.under) out.under = def.under;
+    if (def.tape) out.tape = def.tape;
     if (a && a !== 'big' && a.solvable) out.par = a.minStrikes;
     $('json').value = JSON.stringify(out, null, 2);
   };
@@ -702,6 +764,7 @@ function wire() {
     if (k === 'z') undo();
     else if (k === 'r') restart();
     else if (k === 'h') hint();
+    else if (k === 't') toggleTape();
     else if (k === 'd' && IS_LOCAL) { $('devToggle').checked = !S.dev; $('devToggle').onchange({ target: $('devToggle') }); }
   });
   const onResize = () => { if (S.def || S.mode === 'edit') renderBoard(); };
@@ -721,6 +784,7 @@ async function main() {
   try { const pw = await fetch('../levels/predict-weights.json').then(r => r.ok ? r.json() : null); if (pw) predictWeights = { ...DEFAULT_WEIGHTS, ...pw.weights }; } catch { }
   const data = await fetch('../levels/prototype.json').then(r => r.json());
   S.levels = data.levels;
+  S.chapters = data.chapters ?? [];
   let last = null;
   try { last = localStorage.getItem(STORE_KEY + '.last'); } catch { }
   const lastDef = allLevels().find(d => d.id === last);

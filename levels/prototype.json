@@ -1,7 +1,64 @@
 {
+  "chapters": [
+    {
+      "id": "solvent",
+      "name": "Solvent",
+      "note": "The rules, and the first ways to lose.",
+      "ko": {
+        "name": "용제",
+        "note": "규칙, 그리고 지는 첫 방법들."
+      }
+    },
+    {
+      "id": "shield",
+      "name": "Shields",
+      "note": "What you clear lets the solvent see further.",
+      "ko": {
+        "name": "방패",
+        "note": "지운 자리 너머로 시선이 길어진다."
+      }
+    },
+    {
+      "id": "coat",
+      "name": "Double Coat",
+      "note": "Some paint takes two matches.",
+      "ko": {
+        "name": "두 겹",
+        "note": "어떤 물감은 두 번 맞춰야 벗겨진다."
+      }
+    },
+    {
+      "id": "under",
+      "name": "Undercoat",
+      "note": "Paint laid over other paint.",
+      "ko": {
+        "name": "밑칠",
+        "note": "물감 위에 칠한 물감."
+      }
+    },
+    {
+      "id": "tape",
+      "name": "Masking Tape",
+      "note": "A shield the restorer lays down.",
+      "ko": {
+        "name": "테이프",
+        "note": "복원가가 직접 놓는 방패."
+      }
+    },
+    {
+      "id": "together",
+      "name": "All Together",
+      "note": "Everything so far, in small paintings.",
+      "ko": {
+        "name": "종합",
+        "note": "지금까지의 모든 것, 작은 그림으로."
+      }
+    }
+  ],
   "levels": [
     {
       "id": "p-01",
+      "chapter": "solvent",
       "name": "First Solvent",
       "note": "Strike an empty spot. Matching pigments in its four lines of sight dissolve.",
       "rows": [
@@ -25,6 +82,7 @@
     },
     {
       "id": "p-02",
+      "chapter": "solvent",
       "name": "The Cross",
       "note": "One strike can lift up to four layers at once.",
       "rows": [
@@ -50,6 +108,7 @@
     },
     {
       "id": "p-03",
+      "chapter": "solvent",
       "name": "Fragment 3",
       "note": "Every painting can be restored. Watch what each strike leaves behind.",
       "rows": [
@@ -74,6 +133,7 @@
     },
     {
       "id": "p-04",
+      "chapter": "solvent",
       "name": "Fragment 4",
       "note": "Two pigments. Watch what each strike leaves behind.",
       "rows": [
@@ -98,6 +158,7 @@
     },
     {
       "id": "p-05",
+      "chapter": "solvent",
       "name": "Fragment 5",
       "note": "Three pigments. Some strikes close doors.",
       "rows": [
@@ -123,6 +184,7 @@
     },
     {
       "id": "p-06",
+      "chapter": "solvent",
       "name": "Fragment 6",
       "note": "Three pigments. Some strikes close doors.",
       "rows": [
@@ -148,6 +210,7 @@
     },
     {
       "id": "p-order",
+      "chapter": "shield",
       "name": "Not Yet",
       "note": "When the paint sets, the mistake is often earlier than the last strike.",
       "rows": [
@@ -187,6 +250,7 @@
     },
     {
       "id": "p-reach",
+      "chapter": "shield",
       "name": "All the Way",
       "note": "Clear a layer, and the line of sight runs further.",
       "rows": [
@@ -226,6 +290,7 @@
     },
     {
       "id": "p-07",
+      "chapter": "shield",
       "name": "Fragment 7",
       "note": "Gold leaf: it never lifts, and blocks the solvent.",
       "rows": [
@@ -252,6 +317,7 @@
     },
     {
       "id": "p-08",
+      "chapter": "shield",
       "name": "Fragment 8",
       "note": "Gold leaf: it never lifts, and blocks the solvent.",
       "rows": [
@@ -278,6 +344,7 @@
     },
     {
       "id": "p-hold",
+      "chapter": "shield",
       "name": "All at Once",
       "note": "Four of one pigment can lift in a single strike.",
       "rows": [
@@ -308,6 +375,7 @@
     },
     {
       "id": "p-09",
+      "chapter": "coat",
       "name": "Fragment 9",
       "note": "Double coat: it takes two matches. The first only lifts the top coat.",
       "rows": [
@@ -334,6 +402,7 @@
     },
     {
       "id": "p-coat",
+      "chapter": "coat",
       "name": "One Coat Left",
       "note": "It lost a coat. It did not lose its place.",
       "rows": [
@@ -357,7 +426,35 @@
       }
     },
     {
+      "id": "p-10",
+      "chapter": "coat",
+      "name": "Fragment 10",
+      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "rows": [
+        ".BC..B",
+        "Ac.C.A",
+        "...CA.",
+        ".ab...",
+        "...C..",
+        "..B.B."
+      ],
+      "par": 8,
+      "metrics": {
+        "pRandom": 0.0042,
+        "trapBits": 7.91,
+        "startMoves": 10,
+        "startSafe": 6,
+        "optimalSolutions": 5085,
+        "states": 1520
+      },
+      "ko": {
+        "name": "조각 10",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
       "id": "p-under",
+      "chapter": "under",
       "name": "Underneath",
       "note": "Some paint was laid over other paint. The coat beneath shows at the corner.",
       "rows": [
@@ -388,6 +485,7 @@
     },
     {
       "id": "p-peel",
+      "chapter": "under",
       "name": "Peel Together",
       "note": "When a top coat goes, the tile takes the colour beneath.",
       "rows": [
@@ -419,33 +517,103 @@
       }
     },
     {
-      "id": "p-10",
-      "name": "Fragment 10",
-      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "id": "p-turn",
+      "chapter": "under",
+      "name": "Turncoat",
+      "note": "Peeled paint can change sides.",
       "rows": [
-        ".BC..B",
-        "Ac.C.A",
-        "...CA.",
-        ".ab...",
-        "...C..",
-        "..B.B."
+        "A....",
+        "..BAa",
+        "..bB.",
+        ".C..A"
       ],
-      "par": 8,
-      "metrics": {
-        "pRandom": 0.0042,
-        "trapBits": 7.91,
-        "startMoves": 10,
-        "startSafe": 6,
-        "optimalSolutions": 5085,
-        "states": 1520
-      },
+      "under": [
+        ".....",
+        "....B",
+        "..C..",
+        "....."
+      ],
       "ko": {
-        "name": "조각 10",
-        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+        "name": "변절자",
+        "note": "벗겨진 칠은 편을 바꾸기도 합니다.",
+        "voice": {
+          "stuckAfterBait": "파랑을 막아 주던 칠이었지. 벗기니 파랑이 됐고.",
+          "winAfterBait": "같은 자리. 이번엔 빨강으로 쓸 만큼 쓰고 벗겼지.",
+          "winClean": "쓸모 있는 동안은 빨강으로 두었군."
+        }
+      },
+      "bait": [
+        4,
+        2
+      ],
+      "voice": {
+        "stuckAfterBait": "It was guarding the blues. Peeled, it became one.",
+        "winAfterBait": "Same spot. This time you used it while it was still red.",
+        "winClean": "You kept it red for as long as it was useful."
+      },
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.1667,
+        "trapBits": 2.58,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 13
+      }
+    },
+    {
+      "id": "p-mask",
+      "chapter": "tape",
+      "name": "Masking",
+      "note": "Tape an empty spot and the solvent cannot see past it. Taping is a move too.",
+      "rows": [
+        "..BB",
+        "B..B",
+        "...."
+      ],
+      "tape": 1,
+      "ko": {
+        "name": "가리기",
+        "note": "빈칸에 테이프를 붙이면 용제의 시선이 그 너머로 가지 않습니다. 테이프를 붙이는 것도 한 수입니다."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.0455,
+        "trapBits": 4.46,
+        "startMoves": 11,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 45
+      }
+    },
+    {
+      "id": "p-after",
+      "chapter": "tape",
+      "name": "Not First",
+      "note": "Tape does not always go on first.",
+      "rows": [
+        "AAB.",
+        "AB.A",
+        "...."
+      ],
+      "tape": 1,
+      "ko": {
+        "name": "먼저가 아니다",
+        "note": "테이프가 늘 먼저인 것은 아닙니다."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0065,
+        "trapBits": 7.27,
+        "startMoves": 7,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 52
       }
     },
     {
       "id": "p-chain",
+      "chapter": "together",
       "name": "Chain",
       "note": "Clear one thing, and the next way opens.",
       "rows": [
@@ -477,6 +645,7 @@
     },
     {
       "id": "p-third",
+      "chapter": "together",
       "name": "The Third Beneath",
       "note": "Peel in the right order.",
       "rows": [
@@ -515,6 +684,7 @@
     },
     {
       "id": "p-11",
+      "chapter": "together",
       "name": "Large Canvas I",
       "note": "Everything together.",
       "rows": [
@@ -543,6 +713,7 @@
     },
     {
       "id": "p-12",
+      "chapter": "together",
       "name": "Large Canvas II",
       "note": "Everything together.",
       "rows": [

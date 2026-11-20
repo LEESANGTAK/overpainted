@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=20261118-2">
+<link rel="stylesheet" href="style.css?v=20261120-2">
 </head>
 <body>
 <header>
@@ -27,6 +27,7 @@
 
   <section id="stage">
     <div class="level-head">
+      <div id="levelChapter" hidden></div>
       <h1 id="levelName"></h1>
       <p id="levelNote"></p>
     </div>
@@ -36,7 +37,7 @@
       <div id="overlay" hidden></div>
     </div>
     <div id="hud">
-      <span><span data-i18n="strikes">Strikes</span> <b id="strikes">0</b> / <span data-i18n="par">par</span> <b id="par">–</b></span>
+      <span><span id="strikesLabel">Strikes</span> <b id="strikes">0</b> / <span data-i18n="par">par</span> <b id="par">–</b></span>
       <span><span data-i18n="layersLeft">Layers left</span> <b id="left">0</b></span>
       <span id="status"></span>
     </div>
@@ -44,6 +45,7 @@
       <button id="undo" data-i18n="undo">Undo</button>
       <button id="restart" data-i18n="restart">Restart</button>
       <button id="hint" data-i18n="hint">Hint</button>
+      <button id="tapeBtn" class="tape-btn" title="T" hidden></button>
     </div>
     <p id="voice" hidden></p>
   </section>
@@ -73,6 +75,7 @@
       <h2 data-i18n="level">Level</h2>
       <input id="editName" placeholder="Name" data-i18n-ph="namePh">
       <input id="editNote" placeholder="Note shown to the player" data-i18n-ph="notePh">
+      <label class="row"><span data-i18n="tapeCount">Masking tape</span> <input type="number" id="editTape" min="0" max="5" value="0"></label>
       <div class="row">
         <button id="analyze" class="primary" data-i18n="analyze">Analyze</button>
         <button id="testPlay" data-i18n="testPlay">Test play</button>
@@ -89,6 +92,6 @@
   </aside>
 </main>
 
-<script type="module" src="app.js?v=20261118-2"></script>
+<script type="module" src="app.js?v=20261120-2"></script>
 </body>
 </html>

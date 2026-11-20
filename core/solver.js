@@ -33,17 +33,23 @@ function buildRays(board) {
   return rays;
 }
 
-/** Fast distinct-move enumeration for the solver. Returns [{cell, hits:number[]}]. */
+/**
+ * Fast distinct-move enumeration for the solver. Returns [{cell, hits:number[], tape?}].
+ * A tape move ({cell, hits: [], tape: true}) tapes that cell; it costs a move like a strike.
+ */
 function movesFast(board, rays, hp) {
-  const { tileAt, blocked, tileColor, underColor } = board;
+  const { tileAt, blocked, tileColor, underColor, nTiles } = board;
   const col = t => (hp[t] >= 2 ? tileColor[t] : underColor[t]);
   const N = board.w * board.h;
+  const taped = board.tape > 0 ? cc => hp[nTiles + cc] === 1 : () => false;
   const out = new Map();
+  const empties = [];
   const found = [-1, -1, -1, -1];
   for (let c = 0; c < N; c++) {
-    if (blocked[c]) continue;
+    if (blocked[c] || taped(c)) continue;
     const t0 = tileAt[c];
     if (t0 >= 0 && hp[t0] > 0) continue;
+    empties.push(c);
     const r = rays[c];
     let n = 0;
     for (let d = 0; d < 4; d++) {
@@ -51,7 +57,7 @@ function movesFast(board, rays, hp) {
       const list = r[d];
       for (let i = 0; i < list.length; i++) {
         const cc = list[i];
-        if (blocked[cc]) break;
+        if (blocked[cc] || taped(cc)) break;
         const t = tileAt[cc];
         if (t >= 0 && hp[t] > 0) { found[d] = t; n++; break; }
       }
@@ -73,16 +79,23 @@ function movesFast(board, rays, hp) {
     for (const t of hits) key = key * 256 + (t + 1);
     if (!out.has(key)) out.set(key, { cell: c, hits });
   }
-  return [...out.values()];
+  const moves = [...out.values()];
+  if (board.tape > 0) {
+    let used = 0;
+    for (let c = 0; c < N; c++) used += hp[nTiles + c];
+    if (used < board.tape) for (const c of empties) moves.push({ cell: c, hits: [], tape: true });
+  }
+  return moves;
 }
 
 function keyOf(hp) {
   return String.fromCharCode.apply(null, hp);
 }
 
-function step(hp, hits) {
+function step(board, hp, m) {
   const n = hp.slice();
-  for (const t of hits) n[t]--;
+  if (m.tape) n[board.nTiles + m.cell] = 1;
+  else for (const t of m.hits) n[t]--;
   return n;
 }
 
@@ -102,7 +115,7 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}
     if (hit) return hit;
     if (memo.size >= maxStates) throw new SearchLimit(memo.size);
     let r;
-    if (isClear(state)) {
+    if (isClear(state, board.nTiles)) {
       r = { f: 0, p: 1, ways: 1, nMoves: 0, safe: 0 };
     } else {
       const moves = movesFast(board, rays, state);
@@ -112,7 +125,7 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}
       } else {
         let f = Infinity, p = 0, ways = 0, safe = 0;
         for (const m of moves) {
-          const c = visit(step(state, m.hits));
+          const c = visit(step(board, state, m));
           p += c.p;
           if (c.f < Infinity) safe++;
           const g = c.f + 1;
@@ -134,14 +147,14 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}
   const solution = [];
   if (root.f < Infinity) {
     let state = hp;
-    while (!isClear(state)) {
+    while (!isClear(state, board.nTiles)) {
       const want = memo.get(keyOf(state)).f - 1;
       let chosen = null;
       for (const m of movesFast(board, rays, state)) {
-        const next = step(state, m.hits);
+        const next = step(board, state, m);
         if (memo.get(keyOf(next)).f === want) { chosen = { m, next }; break; }
       }
-      solution.push({ cell: chosen.m.cell, hits: chosen.m.hits });
+      solution.push({ cell: chosen.m.cell, hits: chosen.m.hits, ...(chosen.m.tape ? { tape: true } : {}) });
       state = chosen.next;
     }
   }
@@ -170,15 +183,15 @@ export function findSolution(board, { hp = board.initHp, maxStates = 2_000_000 }
   const rays = buildRays(board);
   const deadSet = new Set();
   function dfs(state, path) {
-    if (isClear(state)) return true;
+    if (isClear(state, board.nTiles)) return true;
     const key = keyOf(state);
     if (deadSet.has(key)) return false;
     if (deadSet.size >= maxStates) throw new SearchLimit(deadSet.size);
     const moves = movesFast(board, rays, state);
     moves.sort((a, b) => b.hits.length - a.hits.length);
     for (const m of moves) {
-      path.push({ cell: m.cell, hits: m.hits });
-      if (dfs(step(state, m.hits), path)) return true;
+      path.push({ cell: m.cell, hits: m.hits, ...(m.tape ? { tape: true } : {}) });
+      if (dfs(step(board, state, m), path)) return true;
       path.pop();
     }
     deadSet.add(key);

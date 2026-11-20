@@ -25,7 +25,7 @@ export const DEFAULT_WEIGHTS = { closes: 2.0, rarest: 1.0, hits: 0.6, straight: 
 /** Remaining tile count per pigment. */
 function countsByColor(board, hp) {
   const n = new Array(6).fill(0);
-  for (let t = 0; t < hp.length; t++) if (hp[t] > 0) n[colorOf(board, hp, t)]++;
+  for (let t = 0; t < board.nTiles; t++) if (hp[t] > 0) n[colorOf(board, hp, t)]++;
   return n;
 }
 
@@ -37,7 +37,7 @@ export function moveFeatures(board, hp, move, counts = countsByColor(board, hp))
   let closes = 0;
   for (const k of colors) {
     let left = 0;
-    for (let t = 0; t < after.length; t++) if (after[t] > 0 && colorOf(board, after, t) === k) left++;
+    for (let t = 0; t < board.nTiles; t++) if (after[t] > 0 && colorOf(board, after, t) === k) left++;
     if (left === 0) closes = 1;
   }
   const present = counts.filter(n => n > 0);
