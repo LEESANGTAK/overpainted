@@ -31,7 +31,7 @@ test('two pairs in one strike', () => {
   assert.equal(probe(b, b.initHp, at(b, 1, 1)).hits.length, 4);
 });
 
-test('gold leaf blocks sight', () => {
+test('old tape blocks sight', () => {
   const b = parseLevel({ rows: ['A#.A'] });
   assert.deepEqual(probe(b, b.initHp, at(b, 2, 0)).hits, []);
 });

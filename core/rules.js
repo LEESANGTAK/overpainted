@@ -4,19 +4,19 @@
 //   .        empty cell (part of the revealed original painting)
 //   A..F     paint tile of pigment A..F (1 layer)
 //   a..f     double coat of pigment A..F (2 layers: the first match only lifts the top coat)
-//   #        gold leaf: never removed, blocks the line of sight
+//   #        old tape (masking tape already on the canvas): never removed, blocks the line of sight
 //
 // Optional `under` rows (same size): a letter under a double coat gives the coat beneath a
 // different pigment. "c" in rows + "A" in under = a C coat over an A coat. Once the top coat
 // is lifted the tile is an ordinary A tile. The undercoat is shown from the start.
 //
 // A strike targets an EMPTY cell. From it, look up/right/down/left and take the nearest
-// non-empty cell in each direction (gold leaf stops the look and yields nothing).
+// non-empty cell in each direction (old tape stops the look and yields nothing).
 // Among those (up to 4) tiles, every tile whose pigment appears 2+ times loses one layer.
 // A strike that hits nothing is a no-op. The level is cleared when no paint tiles remain.
 //
 // Masking tape (optional `tape: N` on a level): the player may tape up to N cells that are
-// empty right now. A taped cell blocks the line of sight like gold leaf and can no longer be
+// empty right now. A taped cell blocks the line of sight like old tape (`#`) and can no longer be
 // struck. Tape stays on (only undo takes it off) and is not a strike.
 //
 // State (`hp`): one byte per tile = layers left. On a level with tape, w*h more bytes follow,

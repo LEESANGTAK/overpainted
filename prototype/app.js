@@ -147,7 +147,8 @@ function fitSize(w, h) {
   const stage = $('stage');
   const mobile = window.innerWidth <= 1100 || window.matchMedia('(pointer: coarse), (hover: none)').matches;
   const stageW = stage.clientWidth > 200 ? Math.min(stage.clientWidth, window.innerWidth) : window.innerWidth;
-  const aw = mobile ? stageW - 36 : stage.clientWidth - 80;
+  const tray = S.mode === 'play' && S.board?.tape ? (mobile ? 58 : 74) : 0; // tape tray left of the canvas
+  const aw = (mobile ? stageW - 36 : stage.clientWidth - 80) - tray;
   const ah = mobile ? Math.max(220, window.innerHeight - 240) : window.innerHeight - 290;
   const maxFit = Math.floor(Math.min(aw / w, ah / h));
   // never below a few pixels: a hidden or not-yet-laid-out stage would otherwise give a negative size
@@ -176,7 +177,7 @@ function renderBoard() {
   el.style.backgroundImage = painting(id, b.w * s, b.h * s);
   let html = '';
   for (let c = 0; c < b.w * b.h; c++) {
-    if (b.blocked[c]) { html += `<div class="cell" data-c="${c}"><div class="gold"></div></div>`; continue; }
+    if (b.blocked[c]) { html += `<div class="cell" data-c="${c}"><div class="oldtape"></div></div>`; continue; }
     if (isTaped(b, hp, c)) { html += `<div class="cell taped" data-c="${c}"><div class="tape"></div></div>`; continue; }
     const t = b.tileAt[c];
     if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t]) : tileHtml(b.underColor[t], false)}</div>`;
@@ -262,11 +263,7 @@ function updateHud() {
   const strikes = S.hist.length; // tape counts as a move too
   $('strikes').textContent = strikes;
   $('strikesLabel').textContent = t(S.board.tape ? 'moves' : 'strikes');
-  const tb = $('tapeBtn'), left = tapeLeft(S.board, S.hp);
-  tb.hidden = !S.board.tape;
-  tb.textContent = t('tape', { n: left });
-  tb.disabled = !left || S.won;
-  tb.classList.toggle('active', !!S.tapeMode);
+  renderTray();
   $('par').textContent = S.def.par ?? S.levelInfo?.minStrikes ?? '–';
   $('left').textContent = layersLeft(S.board, S.hp);
   const st = $('status');
@@ -345,6 +342,7 @@ function loadLevel(def) {
   $('levelName').textContent = lt(def, 'name');
   $('levelNote').textContent = lt(def, 'note') || '';
   showChapter();
+  renderTray();
   $('overlay').hidden = true;
   showMode();
   renderBoard(); renderList(); updateHud(); renderDev();
@@ -352,20 +350,78 @@ function loadLevel(def) {
   try { localStorage.setItem(STORE_KEY + '.last', def.id); } catch { }
 }
 
-// Masking tape: T (or the Tape button) arms it, the next click on an empty cell tapes that cell.
+// Masking tape lives in a tray left of the canvas: one piece per tape. Drag a piece onto an empty
+// cell to tape it. A plain click on a piece (or T) arms tape instead; the next click on a cell tapes it.
+function renderTray() {
+  const tray = $('tapeTray');
+  const n = S.mode === 'play' ? S.board?.tape ?? 0 : 0;
+  tray.hidden = !n;
+  if (!n) return;
+  const left = tapeLeft(S.board, S.hp);
+  tray.classList.toggle('armed', !!S.tapeMode);
+  tray.classList.toggle('off', S.won || !left);
+  tray.title = t('tapeTip');
+  tray.innerHTML = Array.from({ length: n }, (_, i) => `<div class="piece${i >= left ? ' used' : ''}"></div>`).join('');
+}
+function trayDown(e) {
+  const piece = e.target.closest('.piece:not(.used)');
+  if (!piece || S.mode !== 'play' || S.won || S.busy || tapeLeft(S.board, S.hp) <= 0) return;
+  e.preventDefault();
+  const x0 = e.clientX, y0 = e.clientY;
+  // with a finger (Steam Deck touchscreen) the piece rides above the fingertip, and the cell under
+  // the piece -- not under the finger -- is where it lands, so the target is never hidden
+  const lift = e.pointerType === 'mouse' ? 0 : Math.round(S.size * .8 + 28);
+  let ghost = null, over = -1;
+  const mark = c => { cellEl(over)?.classList.remove('drop'); over = c; cellEl(over)?.classList.add('drop'); };
+  const move = ev => {
+    if (!ghost && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;
+    if (!ghost) {
+      ghost = document.createElement('div');
+      ghost.className = 'tape-ghost';
+      ghost.style.width = Math.round(S.size * 1.1) + 'px';
+      ghost.style.height = Math.round(S.size * .5) + 'px';
+      document.body.append(ghost);
+      piece.classList.add('lifted');
+      S.tapeMode = false; $('board').classList.remove('taping');
+    }
+    const px = ev.clientX, py = ev.clientY - lift;
+    ghost.style.left = px + 'px';
+    ghost.style.top = py + 'px';
+    const el = document.elementFromPoint(px, py)?.closest('#board .cell');
+    const c = el ? +el.dataset.c : -1;
+    const ok = c >= 0 && canTape(S.board, S.hp, c);
+    if ((ok ? c : -1) !== over) mark(ok ? c : -1);
+    ghost.classList.toggle('ok', ok);
+  };
+  const end = ev => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', end);
+    window.removeEventListener('pointercancel', end);
+    if (!ghost) { if (ev.type === 'pointerup') toggleTape(); return; } // a click, not a drag
+    ghost.remove();
+    piece.classList.remove('lifted');
+    const c = over;
+    mark(-1);
+    if (c >= 0 && ev.type === 'pointerup') placeTape(c, 'drag');
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+}
+
 function toggleTape() {
   if (S.mode !== 'play' || S.won || S.busy || !S.board.tape) return;
   if (!S.tapeMode && tapeLeft(S.board, S.hp) <= 0) return;
   S.tapeMode = !S.tapeMode;
   renderBoard(); updateHud();
 }
-function placeTape(c) {
+function placeTape(c, via = 'click') {
   S.tapeMode = false;
   if (!canTape(S.board, S.hp, c)) { renderBoard(); updateHud(); return; }
   if (!S.hist.length && !S.replaying) S.attemptBait = false;
   S.hintCell = -1;
   clearRays();
-  log('tape', { cell: c, replay: !!S.replaying || undefined });
+  log('tape', { cell: c, via: S.replaying ? undefined : via, replay: !!S.replaying || undefined });
   S.hist.push(S.hp);
   S.hp = applyTape(S.board, S.hp, c);
   renderBoard();
@@ -568,8 +624,8 @@ function renderPalette() {
   $('palette').innerHTML = BRUSHES.map(ch => {
     const k = COLOR_CHARS.indexOf(ch);
     const u = S.edit.varnish && S.edit.underBrush ? COLOR_CHARS.indexOf(S.edit.underBrush) : k;
-    const inner = ch === '#' ? '<div class="gold"></div>' : k >= 0 ? tileHtml(k, S.edit.varnish, u) : '';
-    const lbl = ch === '.' ? 'erase' : ch === '#' ? 'gold' : PIGMENTS[k].slice(0, 5);
+    const inner = ch === '#' ? '<div class="oldtape"></div>' : k >= 0 ? tileHtml(k, S.edit.varnish, u) : '';
+    const lbl = ch === '.' ? 'erase' : ch === '#' ? 'tape' : PIGMENTS[k].slice(0, 5);
     return `<button class="brush${S.edit.brush === ch ? ' active' : ''}" data-b="${ch}" title="${lbl}">${inner}<span class="lbl">${lbl}</span></button>`;
   }).join('');
 }
@@ -647,6 +703,7 @@ function showMode() {
   if (edit) { $('levelName').textContent = t('editorTitle'); $('levelNote').textContent = t('editorNote'); $('voice').hidden = true; }
   else if (S.def) { $('levelName').textContent = lt(S.def, 'name'); $('levelNote').textContent = lt(S.def, 'note') || ''; }
   showChapter();
+  renderTray();
 }
 
 function showChapter() {
@@ -706,7 +763,7 @@ function wire() {
   });
 
   $('undo').onclick = undo;
-  $('tapeBtn').onclick = toggleTape;
+  $('tapeTray').addEventListener('pointerdown', trayDown);
   $('editTape').onchange = () => { S.edit.info = null; };
   $('restart').onclick = restart;
   $('hint').onclick = hint;

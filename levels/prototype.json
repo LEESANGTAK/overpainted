@@ -292,7 +292,7 @@
       "id": "p-07",
       "chapter": "shield",
       "name": "Fragment 7",
-      "note": "Gold leaf: it never lifts, and blocks the solvent.",
+      "note": "Old tape: someone masked this spot long ago. It never comes off, and blocks the solvent.",
       "rows": [
         "CB..C.",
         "....#C",
@@ -312,14 +312,14 @@
       },
       "ko": {
         "name": "조각 7",
-        "note": "금박: 절대 벗겨지지 않고, 용제의 시선을 가로막습니다."
+        "note": "오래된 테이프: 누군가 오래전에 이 자리를 가려 두었습니다. 떼어지지 않고, 용제의 시선을 가로막습니다."
       }
     },
     {
       "id": "p-08",
       "chapter": "shield",
       "name": "Fragment 8",
-      "note": "Gold leaf: it never lifts, and blocks the solvent.",
+      "note": "Old tape: someone masked this spot long ago. It never comes off, and blocks the solvent.",
       "rows": [
         "#.A.AA",
         "C.....",
@@ -339,7 +339,7 @@
       },
       "ko": {
         "name": "조각 8",
-        "note": "금박: 절대 벗겨지지 않고, 용제의 시선을 가로막습니다."
+        "note": "오래된 테이프: 누군가 오래전에 이 자리를 가려 두었습니다. 떼어지지 않고, 용제의 시선을 가로막습니다."
       }
     },
     {

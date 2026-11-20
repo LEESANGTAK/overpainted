@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=20261120-2">
+<link rel="stylesheet" href="style.css?v=20261120-5">
 </head>
 <body>
 <header>
@@ -31,10 +31,13 @@
       <h1 id="levelName"></h1>
       <p id="levelNote"></p>
     </div>
-    <div id="boardWrap">
-      <div id="board"></div>
-      <svg id="rays"></svg>
-      <div id="overlay" hidden></div>
+    <div id="boardRow">
+      <div id="tapeTray" hidden></div>
+      <div id="boardWrap">
+        <div id="board"></div>
+        <svg id="rays"></svg>
+        <div id="overlay" hidden></div>
+      </div>
     </div>
     <div id="hud">
       <span><span id="strikesLabel">Strikes</span> <b id="strikes">0</b> / <span data-i18n="par">par</span> <b id="par">–</b></span>
@@ -45,7 +48,6 @@
       <button id="undo" data-i18n="undo">Undo</button>
       <button id="restart" data-i18n="restart">Restart</button>
       <button id="hint" data-i18n="hint">Hint</button>
-      <button id="tapeBtn" class="tape-btn" title="T" hidden></button>
     </div>
     <p id="voice" hidden></p>
   </section>
@@ -92,6 +94,6 @@
   </aside>
 </main>
 
-<script type="module" src="app.js?v=20261120-2"></script>
+<script type="module" src="app.js?v=20261120-5"></script>
 </body>
 </html>
