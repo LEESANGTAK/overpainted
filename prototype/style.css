@@ -270,15 +270,12 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
 /* language switch */
 .lang { margin-left: 14px; padding: 2px 10px; font-size: 12px; }
 
-/* the overpainter's voice: a scrawled note that does not belong to the restorer's UI */
-#voice {
-  max-width: 460px; margin: 18px auto 0; padding: 10px 16px 10px 20px; text-align: left;
-  font-style: italic; font-size: 15px; letter-spacing: .02em; color: #e3b3a6;
-  border-left: 2px solid #a8432f; background: linear-gradient(90deg, #a8432f1f, transparent);
-}
-#voice::after { content: ' — ?'; color: var(--muted); font-style: normal; font-size: 12px; }
-#voice.show { animation: voiceIn 1.6s ease-out; }
-@keyframes voiceIn { 0% { opacity: 0; transform: translateY(4px); filter: blur(2px); } 40% { opacity: 0; } 100% { opacity: 1; transform: none; filter: none; } }
+/* a level gone wrong: the paint dries dull (slowly, some moves after the blunder; see turnRoom) */
+#board { transition: filter 7s ease; }
+#boardWrap.dried #board { filter: saturate(.3) brightness(.74) contrast(.9) sepia(.18); }
+#boardWrap.dried { transition: box-shadow 7s ease; box-shadow: 0 0 0 6px #120f0c, 0 12px 40px #000c; }
+
+
 
 /* first-visit notice for testers */
 #welcome {
@@ -341,7 +338,6 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
   #tapeTray { padding: 10px 6px; gap: 12px; }
   #tapeTray .piece { width: 28px; height: 28px; }
   #controls button { padding: 8px 16px; min-height: 38px; font-size: 14px; }
-  #voice { margin-top: 12px; font-size: 14px; padding: 8px 12px 8px 14px; }
 
   #side { border-left: none; border-top: 1px solid var(--line); padding: 12px; }
 

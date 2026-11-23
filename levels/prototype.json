@@ -472,7 +472,10 @@
       ],
       "ko": {
         "name": "한 겹 남았다",
-        "note": "한 겹을 잃었을 뿐, 자리를 잃은 건 아니다."
+        "note": "한 겹을 잃었을 뿐, 자리를 잃은 건 아니다.",
+        "voice": {
+          "winClean": "한 겹을 잃고도 자리는 지켰군."
+        }
       },
       "par": 5,
       "metrics": {
@@ -482,6 +485,96 @@
         "startSafe": 1,
         "optimalSolutions": 2,
         "states": 24
+      },
+      "traps": [
+        {
+          "lifts": [
+            [
+              2,
+              2
+            ]
+          ],
+          "after": 1,
+          "voice": {
+            "stuck": "The yellow in the middle was holding a line. You took it too soon.",
+            "win": "This time the middle yellow stayed until its work was done."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "가운데 노랑은 시선 하나를 막고 있었지. 너무 일찍 가져갔군.",
+              "win": "이번엔 가운데 노랑이 할 일을 다 할 때까지 남아 있었지."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              0,
+              0
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          "voice": {
+            "stuck": "Now the two yellows left sit corner to corner. They never meet.",
+            "win": "This time the middle yellow peeled with a partner it could still reach."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "남은 노랑 둘은 대각선이지. 영영 만나지 못해.",
+              "win": "이번엔 가운데 노랑을 아직 닿는 짝과 함께 벗겼군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              1
+            ]
+          ],
+          "voice": {
+            "stuck": "A double coat needs two partners. You left it none.",
+            "win": "This time the double coat kept its partners."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "두 겹은 짝이 둘 필요하지. 하나도 남겨 두지 않았군.",
+              "win": "이번엔 두 겹의 짝을 남겨 뒀군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              3,
+              1
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "voice": {
+            "stuck": "The two blues left on top sit side by side. They never see each other.",
+            "win": "This time no two blues were left side by side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "위에 남은 파랑 둘은 붙어 있지. 서로를 볼 수 없어.",
+              "win": "이번엔 붙어서 남는 파랑이 없었군."
+            }
+          }
+        }
+      ],
+      "voice": {
+        "winClean": "One coat gone, and it still kept its place."
       }
     },
     {
@@ -842,7 +935,10 @@
       ],
       "ko": {
         "name": "두 혼색",
-        "note": "혼색이 둘. 같은 편을 고를 필요는 없습니다."
+        "note": "혼색이 둘. 같은 편을 고를 필요는 없습니다.",
+        "voice": {
+          "winClean": "혼색 둘, 편도 둘."
+        }
       },
       "par": 3,
       "metrics": {
@@ -852,6 +948,59 @@
         "startSafe": 1,
         "optimalSolutions": 1,
         "states": 11
+      },
+      "traps": [
+        {
+          "lifts": [
+            [
+              4,
+              1
+            ],
+            [
+              2,
+              0
+            ]
+          ],
+          "voice": {
+            "stuck": "That mix was the red's partner. The other one sits right beside the red; they never see each other.",
+            "win": "This time each mix took a different side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "그 혼색이 빨강의 짝이었지. 다른 혼색은 빨강 바로 옆이라 서로 볼 수 없고.",
+              "win": "이번엔 혼색 둘이 서로 다른 편에 섰군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              2,
+              1
+            ],
+            [
+              4,
+              1
+            ],
+            [
+              3,
+              2
+            ]
+          ],
+          "voice": {
+            "stuck": "Blue, mix and red at once. The blues left sit side by side, and the other mix is alone.",
+            "win": "This time the mix took only one side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "파랑, 혼색, 빨강을 한꺼번에. 남은 파랑 둘은 붙어 있고, 혼색은 혼자지.",
+              "win": "이번엔 혼색이 한쪽 편만 들었군."
+            }
+          }
+        }
+      ],
+      "voice": {
+        "winClean": "Two mixes, two sides."
       }
     },
     {
@@ -867,7 +1016,10 @@
       "tape": 1,
       "ko": {
         "name": "가리기",
-        "note": "빈칸에 테이프를 붙이면 용제의 시선이 그 너머로 가지 않습니다. 테이프를 붙이는 것도 한 수입니다."
+        "note": "빈칸에 테이프를 붙이면 용제의 시선이 그 너머로 가지 않습니다. 테이프를 붙이는 것도 한 수입니다.",
+        "voice": {
+          "winClean": "셋이 보였고, 둘이 대답했군."
+        }
       },
       "par": 3,
       "metrics": {
@@ -877,6 +1029,94 @@
         "startSafe": 1,
         "optimalSolutions": 1,
         "states": 45
+      },
+      "traps": [
+        {
+          "lifts": [
+            [
+              2,
+              0
+            ],
+            [
+              3,
+              1
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          "voice": {
+            "stuck": "Three blues at once leave one alone.",
+            "win": "This time only two answered."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "파랑 셋을 한꺼번에. 하나가 혼자 남지.",
+              "win": "이번엔 둘만 대답했군."
+            }
+          }
+        },
+        {
+          "tape": "any",
+          "voice": {
+            "stuck": "Tape blocks a look. Not the one that was in the way.",
+            "win": "This time the tape stopped the right look."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "테이프는 시선을 막지. 막아야 할 시선은 그게 아니었고.",
+              "win": "이번엔 테이프가 막아야 할 시선을 막았군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              2,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ],
+          "voice": {
+            "stuck": "The two blues left sit side by side. They never see each other.",
+            "win": "This time no two were left side by side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "남은 파랑 둘은 나란히 붙어 있지. 서로를 볼 수 없어.",
+              "win": "이번엔 붙어서 남는 둘이 없었군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              0,
+              1
+            ],
+            [
+              3,
+              1
+            ]
+          ],
+          "voice": {
+            "stuck": "The two blues left sit side by side. They never see each other.",
+            "win": "This time no two were left side by side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "남은 파랑 둘은 나란히 붙어 있지. 서로를 볼 수 없어.",
+              "win": "이번엔 붙어서 남는 둘이 없었군."
+            }
+          }
+        }
+      ],
+      "voice": {
+        "winClean": "Three looked, two answered."
       }
     },
     {
@@ -892,7 +1132,10 @@
       "tape": 1,
       "ko": {
         "name": "먼저가 아니다",
-        "note": "테이프가 늘 먼저인 것은 아닙니다."
+        "note": "테이프가 늘 먼저인 것은 아닙니다.",
+        "voice": {
+          "winClean": "먼저 치고, 그다음 덮었군."
+        }
       },
       "par": 4,
       "metrics": {
@@ -902,6 +1145,68 @@
         "startSafe": 1,
         "optimalSolutions": 1,
         "states": 52
+      },
+      "traps": [
+        {
+          "tape": "any",
+          "voice": {
+            "stuck": "The tape covered a look you still needed.",
+            "win": "This time you used the spot, then covered it."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "아직 쓸 시선을 테이프가 막아 버렸지.",
+              "win": "이번엔 그 자리를 먼저 쓰고 덮었군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ],
+            [
+              3,
+              1
+            ]
+          ],
+          "voice": {
+            "stuck": "Three reds out of four. One is left alone.",
+            "win": "This time the reds went two by two."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "빨강 넷 중 셋을 한꺼번에. 하나가 혼자 남았지.",
+              "win": "이번엔 빨강이 둘씩 갔군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              3,
+              1
+            ]
+          ],
+          "voice": {
+            "stuck": "The two reds left sit side by side. They never see each other.",
+            "win": "This time no two reds were left side by side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "남은 빨강 둘은 붙어 있지. 서로를 볼 수 없어.",
+              "win": "이번엔 붙어서 남는 빨강이 없었군."
+            }
+          }
+        }
+      ],
+      "voice": {
+        "winClean": "First the strike, then the tape."
       }
     },
     {
@@ -918,7 +1223,10 @@
       "tape": 1,
       "ko": {
         "name": "그 자리에",
-        "note": "어떤 방패는 치워야 합니다. 그 자리까지 열어 둘 필요는 없습니다."
+        "note": "어떤 방패는 치워야 합니다. 그 자리까지 열어 둘 필요는 없습니다.",
+        "voice": {
+          "winClean": "방패는 떠났고, 테이프가 그 자리에 섰군."
+        }
       },
       "par": 5,
       "metrics": {
@@ -928,6 +1236,68 @@
         "startSafe": 1,
         "optimalSolutions": 2,
         "states": 105
+      },
+      "traps": [
+        {
+          "tape": "any",
+          "voice": {
+            "stuck": "The one place to cover was where the shield had been.",
+            "win": "This time the tape took the shield's place."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "덮어야 할 곳은 방패가 있던 자리였지.",
+              "win": "이번엔 테이프가 방패의 자리를 대신했군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              2,
+              0
+            ],
+            [
+              3,
+              1
+            ],
+            [
+              2,
+              3
+            ]
+          ],
+          "voice": {
+            "stuck": "Three blues at once. The fourth is left alone.",
+            "win": "This time the blues went two by two."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "파랑 셋을 한꺼번에. 넷째가 혼자 남았지.",
+              "win": "이번엔 파랑이 둘씩 갔군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              2,
+              3
+            ]
+          ],
+          "voice": {
+            "stuck": "The two blues left sit side by side. They never see each other.",
+            "win": "This time no two blues were left side by side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "남은 파랑 둘은 붙어 있지. 서로를 볼 수 없어.",
+              "win": "이번엔 붙어서 남는 파랑이 없었군."
+            }
+          }
+        }
+      ],
+      "voice": {
+        "winClean": "The shield went, and the tape stood in its place."
       }
     },
     {
@@ -944,7 +1314,10 @@
       "tape": 1,
       "ko": {
         "name": "두 겹을 기다려",
-        "note": "테이프는 모든 시선을 막습니다. 아직 필요한 시선까지도."
+        "note": "테이프는 모든 시선을 막습니다. 아직 필요한 시선까지도.",
+        "voice": {
+          "winClean": "두 겹을 기다렸군."
+        }
       },
       "par": 6,
       "metrics": {
@@ -954,6 +1327,72 @@
         "startSafe": 1,
         "optimalSolutions": 1,
         "states": 288
+      },
+      "traps": [
+        {
+          "tape": "any",
+          "voice": {
+            "stuck": "Tape goes on once and stays. Not then, not there.",
+            "win": "This time you waited for the coat."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "테이프는 한 번 붙이면 그대로지. 그때, 그 자리가 아니었어.",
+              "win": "이번엔 두 겹이 다 벗겨지길 기다렸군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              3,
+              0
+            ],
+            [
+              4,
+              2
+            ],
+            [
+              3,
+              3
+            ]
+          ],
+          "voice": {
+            "stuck": "Three yellows at once. The fourth is left alone.",
+            "win": "This time the yellows went two by two."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "노랑 셋을 한꺼번에. 넷째가 혼자 남았지.",
+              "win": "이번엔 노랑이 둘씩 갔군."
+            }
+          }
+        },
+        {
+          "lifts": [
+            [
+              3,
+              0
+            ],
+            [
+              3,
+              3
+            ]
+          ],
+          "voice": {
+            "stuck": "The two yellows left sit side by side. They never see each other.",
+            "win": "This time no two yellows were left side by side."
+          },
+          "ko": {
+            "voice": {
+              "stuck": "남은 노랑 둘은 붙어 있지. 서로를 볼 수 없어.",
+              "win": "이번엔 붙어서 남는 노랑이 없었군."
+            }
+          }
+        }
+      ],
+      "voice": {
+        "winClean": "You waited for the coat."
       }
     },
     {

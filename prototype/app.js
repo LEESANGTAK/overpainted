@@ -1,6 +1,7 @@
 import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
+import { isMuted, toggleMute, unlock, setLost } from './mood.js';
 import { t, lt, applyStatic, toggleLang } from './i18n.js';
 import { COLLECTOR_URL } from './config.js';
 let predictWeights = DEFAULT_WEIGHTS; // replaced by levels/predict-weights.json when present
@@ -286,7 +287,8 @@ function updateHud() {
   if (S.won) return;
   if (!isClear(S.hp, S.board.nTiles) && listMoves(S.board, S.hp).length === 0) { // tape never makes a strike
     st.textContent = t('deadEnd');
-    if (S.attemptBait) say('stuckAfterBait');
+    if (!S.lostAt) S.lostAt = S.hist.length; // (a board too big to analyse move by move)
+    turnRoom(); // (the overpainter stays silent here; the room says it)
     st.className = 'bad';
   } else if (S.dev && S.nowInfo && !S.nowInfo.solvable) {
     st.textContent = t('devLost');
@@ -346,10 +348,8 @@ function loadLevel(def) {
   S.hp = S.board.initHp.slice();
   S.hist = []; S.won = false; S.hints = 0; S.hintCell = -1; S.busy = false; S.queued = null; S.tapeMode = false;
   S.gen = (S.gen ?? 0) + 1; // a strike still animating from the previous level checks this and drops out
-  // the overpainter's bait for this level (if any): the move a click on def.bait makes at the start
-  S.baitKey = def.bait ? probe(S.board, S.board.initHp, def.bait[1] * S.board.w + def.bait[0])?.hits.join(',') : null;
-  S.attemptBait = false; S.fell = false; S.said = new Set();
-  $('voice').hidden = true;
+  S.lostAt = 0; // moves made when this attempt became unwinnable (0 = still winnable)
+  calmRoom();
   S.levelInfo = safeAnalyze(S.board, S.board.initHp, 800_000);
   if (S.def.par == null && S.levelInfo && S.levelInfo !== 'big') S.def.par = S.levelInfo.minStrikes;
   S.nowInfo = S.levelInfo;
@@ -434,12 +434,12 @@ function toggleTape() {
 function placeTape(c, via = 'click') {
   S.tapeMode = false;
   if (!canTape(S.board, S.hp, c)) { renderBoard(); updateHud(); return; }
-  if (!S.hist.length && !S.replaying) S.attemptBait = false;
   S.hintCell = -1;
   clearRays();
   log('tape', { cell: c, via: S.replaying ? undefined : via, replay: !!S.replaying || undefined });
   S.hist.push(S.hp);
   S.hp = applyTape(S.board, S.hp, c);
+  noteBlunder();
   renderBoard();
   afterMove();
 }
@@ -469,19 +469,51 @@ async function strikeAt(c) {
   await sleep(280);
   if (gen !== S.gen) return; // another level was loaded mid-animation: drop this strike
   if (S.mode !== 'play') { S.busy = false; return; } // editor opened mid-animation
-  if (!S.hist.length && !S.replaying) {
-    S.attemptBait = r.hits.join(',') === S.baitKey;
-    if (S.attemptBait) S.fell = true;
-  }
   S.hist.push(S.hp);
   S.hp = applyHits(S.hp, r.hits);
+  noteBlunder();
   S.busy = false;
   renderBoard();
   afterMove();
   if (S.queued != null) { const q = S.queued; S.queued = null; await strikeAt(q); }
 }
 
+// After a move: if this attempt was still winnable and no longer is, this move was the blunder.
+function noteBlunder() {
+  if (S.lostAt || S.replaying) return;
+  const now = safeAnalyze(S.board, S.hp, 300_000);
+  if (now === 'big' || now.solvable) return;
+  S.lostAt = S.hist.length;
+  // the room turns later, not on this move: after TURN_MOVES more moves, TURN_MS, or a dead end
+  clearTimeout(S.turnTimer);
+  S.turnTimer = setTimeout(turnRoom, TURN_MS);
+}
+function forgetBlunder() { // after undo/restart: the blunder is no longer on the board
+  if (S.lostAt && S.hist.length < S.lostAt) { S.lostAt = 0; calmRoom(); }
+}
+
+// The quiet signal that a level has gone wrong: the music turns to its dark twin and the paint on
+// the canvas dries dull. Never on the blunder itself (that would make every move a free test):
+// only TURN_MOVES moves later, after TURN_MS, or at a dead end.
+const TURN_MOVES = 2, TURN_MS = 25_000;
+function turnRoom() {
+  if (!S.lostAt || S.turned || S.won || S.mode !== 'play') return;
+  S.turned = true;
+  setLost(true);
+  $('boardWrap').classList.add('dried');
+  log('mood', { lost: true, moves: S.hist.length - S.lostAt });
+}
+function calmRoom() {
+  clearTimeout(S.turnTimer);
+  if (!S.turned) return;
+  S.turned = false;
+  setLost(false);
+  $('boardWrap').classList.remove('dried');
+  log('mood', { lost: false });
+}
+
 function afterMove() {
+  if (S.lostAt && S.hist.length - S.lostAt >= TURN_MOVES) turnRoom();
   if (isClear(S.hp, S.board.nTiles)) return win();
   updateHud();
   if (S.dev) refreshNow(); else S.nowInfo = null;
@@ -489,6 +521,7 @@ function afterMove() {
 
 function win() {
   S.won = true;
+  calmRoom();
   S.nowInfo = null; renderDev();
   const strikes = S.hist.length, par = S.def.par;
   const prev = store.best[S.def.id];
@@ -513,7 +546,6 @@ function win() {
     ${next && S.def.id !== 'edit-test' ? `<button id="ovNext" class="primary">${escapeHtml(nextLabel)}</button>` : ''}
     ${S.def.id === 'edit-test' ? `<button id="ovEdit" class="primary">${t('backEditor')}</button>` : ''}
   </div>`;
-  if (S.baitKey) say(S.fell ? 'winAfterBait' : 'winClean');
   $('overlay').hidden = false;
   $('ovRetry').onclick = restart;
   if ($('ovNext')) $('ovNext').onclick = () => loadLevel(next);
@@ -559,30 +591,25 @@ function showTester() {
   if (rec && TESTER.name) rec.textContent = `${t('rec')} · ${TESTER.name}`;
 }
 
-// The overpainter speaks: one line per trigger per visit, from the level's `voice` (see levels file).
-function say(trigger) {
-  const line = lt(S.def, 'voice')?.[trigger];
-  if (!line || S.said.has(trigger)) return;
-  S.said.add(trigger);
-  const el = $('voice');
-  el.textContent = line;
-  el.hidden = false;
-  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  log('voice', { trigger });
+function onMute() {
+  const muted = toggleMute();
+  $('status').textContent = t(muted ? 'soundOff' : 'soundOn');
+  $('status').className = '';
 }
 
 function undo() {
   if (S.busy || !S.hist.length || S.mode !== 'play') return;
   log('undo', { wasWon: S.won || undefined });
   S.hp = S.hist.pop(); S.won = false; S.hintCell = -1; S.tapeMode = false;
-  if (!S.hist.length) S.attemptBait = false;
+  forgetBlunder();
   $('overlay').hidden = true;
   renderBoard(); afterMove();
 }
 function restart() {
   if (S.busy || S.mode !== 'play') return;
   log('restart', { strikes: S.hist.length, wasWon: S.won || undefined });
-  S.hp = S.board.initHp.slice(); S.hist = []; S.won = false; S.hintCell = -1; S.attemptBait = false; S.tapeMode = false;
+  S.hp = S.board.initHp.slice(); S.hist = []; S.won = false; S.hintCell = -1; S.tapeMode = false;
+  forgetBlunder();
   $('overlay').hidden = true;
   renderBoard(); afterMove();
 }
@@ -722,7 +749,7 @@ function showMode() {
   $('hud').style.visibility = edit ? 'hidden' : '';
   $('controls').style.visibility = edit ? 'hidden' : '';
   $('overlay').hidden = edit || !S.won;
-  if (edit) { $('levelName').textContent = t('editorTitle'); $('levelNote').textContent = t('editorNote'); $('voice').hidden = true; }
+  if (edit) { $('levelName').textContent = t('editorTitle'); $('levelNote').textContent = t('editorNote'); }
   else if (S.def) { $('levelName').textContent = lt(S.def, 'name'); $('levelNote').textContent = lt(S.def, 'note') || ''; }
   showChapter();
   renderTray();
@@ -847,8 +874,11 @@ function wire() {
     else if (k === 'r') restart();
     else if (k === 'h') hint();
     else if (k === 't') toggleTape();
+    else if (k === 'm') onMute();
     else if (k === 'd' && IS_LOCAL) { $('devToggle').checked = !S.dev; $('devToggle').onchange({ target: $('devToggle') }); }
   });
+  // browsers only start audio after a gesture: open the pen's audio on the first touch or click
+  window.addEventListener('pointerdown', () => { if (!isMuted()) unlock(); }, { once: true });
   const onResize = () => { if (S.def || S.mode === 'edit') renderBoard(); };
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => { onResize(); setTimeout(onResize, 120); });

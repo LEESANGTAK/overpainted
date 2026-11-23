@@ -5,8 +5,9 @@ const KEY = 'overpainted.lang';
 const STR = {
   ko: {
     brandSub: '프로토타입', play: '플레이', editor: '에디터', rec: '● 녹화',
-    keys: 'Z 되돌리기 · R 처음부터 · H 힌트 · D 개발자',
-    keysPlay: 'Z 되돌리기 · R 처음부터 · H 힌트',
+    keys: 'Z 되돌리기 · R 처음부터 · H 힌트 · M 소리 · D 개발자',
+    soundOn: '소리 켬', soundOff: '소리 끔',
+    keysPlay: 'Z 되돌리기 · R 처음부터 · H 힌트 · M 소리',
     langBtn: 'EN',
     strikes: '타격', par: '기준', layersLeft: '남은 겹',
     undo: '되돌리기', restart: '처음부터', hint: '힌트',
@@ -37,8 +38,9 @@ const STR = {
   },
   en: {
     brandSub: 'prototype', play: 'Play', editor: 'Editor', rec: '● REC',
-    keys: 'Z undo · R restart · H hint · D dev',
-    keysPlay: 'Z undo · R restart · H hint',
+    keys: 'Z undo · R restart · H hint · M sound · D dev',
+    soundOn: 'Sound on', soundOff: 'Sound off',
+    keysPlay: 'Z undo · R restart · H hint · M sound',
     resultMoves: '{s} moves · par {p}', moves: 'Moves', tapeTip: 'Drag tape onto an empty cell (or click it, then a cell · T)', tapeCount: 'Masking tape', hintTape: 'Try dragging tape onto the marked cell.',
     langBtn: '한국어',
     strikes: 'Strikes', par: 'par', layersLeft: 'Layers left',
