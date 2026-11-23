@@ -989,6 +989,81 @@
       "par": 4
     },
     {
+      "id": "p-hiding",
+      "chapter": "together",
+      "name": "One Is Hiding",
+      "note": "Not every red is on top.",
+      "rows": [
+        ".A.B",
+        "a..A",
+        ".A..",
+        ".Bc."
+      ],
+      "under": [
+        "....",
+        "C...",
+        "....",
+        "..A."
+      ],
+      "tape": 1,
+      "ko": {
+        "name": "하나는 숨어 있다",
+        "note": "모든 빨강이 위에 있는 건 아닙니다.",
+        "voice": {
+          "stuckAfterBait": "넷을 한꺼번에. 다섯 번째는 노랑 밑에 있었지.",
+          "winAfterBait": "같은 자리. 이번엔 테이프 덕에 셋만 대답했지.",
+          "winClean": "노랑 밑의 빨강까지 셌군."
+        }
+      },
+      "bait": [
+        1,
+        1
+      ],
+      "voice": {
+        "stuckAfterBait": "Four at once. The fifth was under the yellow.",
+        "winAfterBait": "Same spot. This time the tape let only three answer.",
+        "winClean": "You counted the red under the yellow."
+      },
+      "par": 5
+    },
+    {
+      "id": "p-sameside",
+      "chapter": "together",
+      "name": "Same Side",
+      "note": "Two mixes again. The double coat decides the side.",
+      "rows": [
+        "..BA",
+        "...A",
+        "BA..",
+        "..Bb"
+      ],
+      "mix": [
+        "....",
+        "...B",
+        "....",
+        "..A."
+      ],
+      "ko": {
+        "name": "같은 편",
+        "note": "다시 혼색이 둘. 어느 편인지는 두 겹이 정합니다.",
+        "voice": {
+          "stuckAfterBait": "혼색이 빨강 편으로 갔지. 파랑 두 겹은 오지 않을 짝을 기다렸고.",
+          "winAfterBait": "같은 자리. 이번엔 혼색이 파랑으로 왔지.",
+          "winClean": "혼색 둘 다 파랑 편에 세웠군."
+        }
+      },
+      "bait": [
+        3,
+        2
+      ],
+      "voice": {
+        "stuckAfterBait": "The mix went with the red. The blue coat waited for a partner who never came.",
+        "winAfterBait": "Same spot. This time the mix came as blue.",
+        "winClean": "You put both mixes on the blue side."
+      },
+      "par": 4
+    },
+    {
       "id": "p-third",
       "chapter": "together",
       "name": "The Third Beneath",
@@ -1028,6 +1103,44 @@
       "par": 5
     },
     {
+      "id": "p-redshare",
+      "chapter": "together",
+      "name": "Save One for Red",
+      "note": "One red, and two dabs that could be red.",
+      "rows": [
+        "BA..",
+        "B...",
+        "BB.A",
+        "ABB."
+      ],
+      "mix": [
+        ".B..",
+        "....",
+        "...B",
+        "...."
+      ],
+      "tape": 1,
+      "ko": {
+        "name": "빨강 몫",
+        "note": "빨강은 하나, 빨강이 될 수 있는 덩이는 둘.",
+        "voice": {
+          "stuckAfterBait": "혼색이 파랑으로 갔지. 외톨이 빨강에겐 아무도 남지 않았고.",
+          "winAfterBait": "같은 자리. 이번엔 혼색이 빨강으로 남아 있었지.",
+          "winClean": "빨강 몫의 혼색을 지켜 뒀군."
+        }
+      },
+      "bait": [
+        3,
+        3
+      ],
+      "voice": {
+        "stuckAfterBait": "The mix went blue. The lone red had no one left.",
+        "winAfterBait": "Same spot. This time the mix stayed red.",
+        "winClean": "You kept one mix for the red."
+      },
+      "par": 5
+    },
+    {
       "id": "p-11",
       "chapter": "together",
       "name": "Large Canvas I",
@@ -1054,7 +1167,7 @@
         "note": "지금까지의 모든 것."
       },
       "extra": true,
-      "parent": "p-third"
+      "parent": "p-redshare"
     },
     {
       "id": "p-12",
