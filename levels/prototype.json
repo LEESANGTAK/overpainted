@@ -46,6 +46,24 @@
       }
     },
     {
+      "id": "knife",
+      "name": "The Knife",
+      "note": "One mixed dab, cut in two.",
+      "ko": {
+        "name": "칼",
+        "note": "혼색 한 덩이를 둘로 가른다."
+      }
+    },
+    {
+      "id": "palette",
+      "name": "The Palette",
+      "note": "Mix what the cell sees.",
+      "ko": {
+        "name": "팔레트",
+        "note": "그 칸에서 보이는 색을 섞는다."
+      }
+    },
+    {
       "id": "tape",
       "name": "Masking Tape",
       "note": "A shield the restorer lays down.",
@@ -61,15 +79,6 @@
       "ko": {
         "name": "원본",
         "note": "어떤 물감은 그림 그 자체다. 그대로 둔다."
-      }
-    },
-    {
-      "id": "tools",
-      "name": "New Tools (trial)",
-      "note": "Paint you add, paint you cut.",
-      "ko": {
-        "name": "새 도구 (시험)",
-        "note": "더하는 물감, 가르는 물감."
       }
     },
     {
@@ -1030,6 +1039,231 @@
       }
     },
     {
+      "id": "p-split1",
+      "chapter": "knife",
+      "name": "Both Sides Short",
+      "note": "Red is one short, and so is blue. Cut the mixed dab in two: one pigment goes to an empty neighbour.",
+      "rows": [
+        "....",
+        ".AB.",
+        ".A.A"
+      ],
+      "mix": [
+        "....",
+        "....",
+        ".B.."
+      ],
+      "split": 1,
+      "ko": {
+        "name": "양쪽 다 모자랄 때",
+        "note": "빨강도 하나, 파랑도 하나 모자랍니다. 칼로 혼색을 둘로 나눠, 한 색을 옆 빈칸으로 보내세요."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.025,
+        "trapBits": 5.32,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 14
+      }
+    },
+    {
+      "id": "p-knife2",
+      "chapter": "knife",
+      "name": "Which One to Cut",
+      "note": "Two mixed dabs, one knife. Only one of them should be cut.",
+      "rows": [
+        "...A",
+        ".BAB",
+        "..BA"
+      ],
+      "mix": [
+        "....",
+        "..BA",
+        "...."
+      ],
+      "split": 1,
+      "ko": {
+        "name": "어느 쪽을 가를까",
+        "note": "혼색은 둘, 칼은 하나. 가를 것은 그중 하나뿐입니다."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0208,
+        "trapBits": 5.58,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 44
+      }
+    },
+    {
+      "id": "p-knife3",
+      "chapter": "knife",
+      "name": "Room to Cut",
+      "note": "A cut half needs an empty neighbour. Make the room first.",
+      "rows": [
+        "BBA.",
+        "B.AB",
+        "A.b.",
+        ".A.."
+      ],
+      "mix": [
+        "....",
+        "..B.",
+        "....",
+        "...."
+      ],
+      "split": 1,
+      "ko": {
+        "name": "가를 자리",
+        "note": "갈라낸 반쪽은 옆 빈칸이 있어야 갑니다. 자리부터 만드세요."
+      },
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0097,
+        "trapBits": 6.68,
+        "startMoves": 6,
+        "startSafe": 3,
+        "optimalSolutions": 1,
+        "states": 154
+      }
+    },
+    {
+      "id": "p-knife4",
+      "chapter": "knife",
+      "name": "Cut Twice",
+      "note": "Two cuts. The second one waits for its room.",
+      "rows": [
+        "ABAA",
+        ".BAB",
+        "..A.",
+        "...."
+      ],
+      "mix": [
+        "...B",
+        ".A..",
+        "....",
+        "...."
+      ],
+      "split": 2,
+      "ko": {
+        "name": "두 번 가르기",
+        "note": "두 번 가릅니다. 두 번째 칼은 자리가 날 때까지 기다립니다."
+      },
+      "par": 7,
+      "metrics": {
+        "pRandom": 0.0179,
+        "trapBits": 5.81,
+        "startMoves": 7,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 41
+      }
+    },
+    {
+      "id": "p-palette1",
+      "chapter": "palette",
+      "name": "Mixed on the Spot",
+      "note": "One red, with no partner. The palette mixes the two pigments a cell can see. Choose where, and when.",
+      "rows": [
+        "BA.",
+        "..B",
+        ".BB"
+      ],
+      "palette": 1,
+      "ko": {
+        "name": "그 자리에서 섞기",
+        "note": "빨강 하나에 짝이 없습니다. 팔레트는 그 칸에서 보이는 두 색을 섞습니다. 어디서, 언제 섞을지 고르세요."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0333,
+        "trapBits": 4.91,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 25
+      }
+    },
+    {
+      "id": "p-palette2",
+      "chapter": "palette",
+      "name": "Three Pigments",
+      "note": "Red, blue and ochre. The palette takes only two: find the cell that sees the right pair.",
+      "rows": [
+        "..CA",
+        "C..B",
+        "AA.."
+      ],
+      "palette": 1,
+      "ko": {
+        "name": "세 가지 물감",
+        "note": "빨강, 파랑, 황토. 팔레트는 두 색만 섞습니다. 맞는 두 색이 보이는 칸을 찾으세요."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.01,
+        "trapBits": 6.64,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 49
+      }
+    },
+    {
+      "id": "p-palette3",
+      "chapter": "palette",
+      "name": "Where You Just Struck",
+      "note": "A cell you have struck sees differently afterwards.",
+      "rows": [
+        "BA..",
+        ".bB.",
+        "A.B.",
+        ".A.."
+      ],
+      "palette": 1,
+      "ko": {
+        "name": "방금 친 자리",
+        "note": "한 번 친 칸은 그다음에 다른 색을 봅니다."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0045,
+        "trapBits": 7.78,
+        "startMoves": 7,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 61
+      }
+    },
+    {
+      "id": "p-palette4",
+      "chapter": "palette",
+      "name": "Mixed Twice",
+      "note": "Two mixes. Each one changes what the next cell sees.",
+      "rows": [
+        ".A.B",
+        ".ABB",
+        "...B"
+      ],
+      "palette": 2,
+      "ko": {
+        "name": "두 번 섞기",
+        "note": "두 번 섞습니다. 하나를 섞으면 다음 칸에서 보이는 색이 바뀝니다."
+      },
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0046,
+        "trapBits": 7.75,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 95
+      }
+    },
+    {
       "id": "p-mask",
       "chapter": "tape",
       "name": "Masking",
@@ -1513,87 +1747,6 @@
         "optimalSolutions": 1,
         "states": 37,
         "pCareful": 0.025
-      }
-    },
-    {
-      "id": "p-retouch1",
-      "chapter": "tools",
-      "name": "A Partner, Painted",
-      "note": "One blue has no partner on the canvas. You have one dab of blue: put it where it counts. Your dab has to come off too.",
-      "rows": [
-        "AA..",
-        "A..A",
-        ".B..",
-        "...."
-      ],
-      "retouch": "B",
-      "ko": {
-        "name": "짝을 그려 주다",
-        "note": "파랑 하나는 캔버스에 짝이 없습니다. 파랑 한 점이 있으니 쓸모 있는 자리에 찍으세요. 찍은 점도 다시 벗겨야 합니다."
-      },
-      "par": 3,
-      "metrics": {
-        "pRandom": 0.0238,
-        "trapBits": 5.39,
-        "startMoves": 14,
-        "startSafe": 1,
-        "optimalSolutions": 1,
-        "states": 91
-      }
-    },
-    {
-      "id": "p-split1",
-      "chapter": "tools",
-      "name": "Both Sides Short",
-      "note": "Red is one short, and so is blue. Cut the mixed dab in two: one pigment goes to an empty neighbour.",
-      "rows": [
-        "....",
-        ".AB.",
-        ".A.A"
-      ],
-      "mix": [
-        "....",
-        "....",
-        ".B.."
-      ],
-      "split": 1,
-      "ko": {
-        "name": "양쪽 다 모자랄 때",
-        "note": "빨강도 하나, 파랑도 하나 모자랍니다. 칼로 혼색을 둘로 나눠, 한 색을 옆 빈칸으로 보내세요."
-      },
-      "par": 3,
-      "metrics": {
-        "pRandom": 0.025,
-        "trapBits": 5.32,
-        "startMoves": 5,
-        "startSafe": 1,
-        "optimalSolutions": 1,
-        "states": 14
-      }
-    },
-    {
-      "id": "p-palette1",
-      "chapter": "tools",
-      "name": "Mixed on the Spot",
-      "note": "One red, with no partner. The palette mixes the two pigments a cell can see. Choose where, and when.",
-      "rows": [
-        "BA.",
-        "..B",
-        ".BB"
-      ],
-      "palette": 1,
-      "ko": {
-        "name": "그 자리에서 섞기",
-        "note": "빨강 하나에 짝이 없습니다. 팔레트는 그 칸에서 보이는 두 색을 섞습니다. 어디서, 언제 섞을지 고르세요."
-      },
-      "par": 4,
-      "metrics": {
-        "pRandom": 0.0333,
-        "trapBits": 4.91,
-        "startMoves": 5,
-        "startSafe": 1,
-        "optimalSolutions": 1,
-        "states": 25
       }
     },
     {
