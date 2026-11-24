@@ -267,7 +267,9 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
 #palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .brush { height: 40px; position: relative; padding: 0; }
 .brush.active { outline: 2px solid var(--accent); outline-offset: 1px; }
-.brush .tile, .brush .oldtape { inset: 5px; }
+.brush .tile { inset: 5px; }
+/* the tape brush: one square cell's X, centred (stretched across the wide button its strips would overflow) */
+.brush .oldtape { top: 5px; bottom: 5px; left: 50%; right: auto; width: 30px; margin-left: -15px; overflow: hidden; }
 .brush .tile.varnish { inset: 11px; }
 .brush .lbl { position: absolute; bottom: 1px; right: 4px; font-size: 10px; color: var(--muted); }
 
