@@ -881,22 +881,22 @@
       "name": "Pick a Side",
       "note": "A mixed dab goes one way only. Send it where it is needed.",
       "rows": [
-        "AAB.",
-        "....",
-        "A..A"
+        "B..A",
+        ".AAA",
+        "B..."
       ],
       "mix": [
-        "B...",
         "....",
+        ".B..",
         "...."
       ],
       "ko": {
         "name": "편 고르기",
         "note": "혼색은 한쪽으로만 갈 수 있습니다. 필요한 쪽으로 보내세요.",
         "voice": {
-          "stuckAfterBait": "빨강 편에 섰지. 파랑에겐 그밖에 없었는데.",
-          "winAfterBait": "빨강은 빨강끼리 해결했지.",
-          "winClean": "혼자인 쪽에 보냈군."
+          "stuckAfterBait": "파랑 둘이 데려갔지. 빨강 하나가 남았는데.",
+          "winAfterBait": "파랑은 파랑끼리 해결했지.",
+          "winClean": "혼자 남을 쪽에 보냈군."
         }
       },
       "bait": [
@@ -904,18 +904,18 @@
         1
       ],
       "voice": {
-        "stuckAfterBait": "It went red. The blue had no one else.",
-        "winAfterBait": "The reds took care of themselves.",
-        "winClean": "You sent it to the one alone."
+        "stuckAfterBait": "The blues took it along. One red was left over.",
+        "winAfterBait": "The blues took care of themselves.",
+        "winClean": "You sent it to the side that would be left over."
       },
-      "par": 2,
+      "par": 3,
       "metrics": {
-        "pRandom": 0.3333,
-        "trapBits": 1.58,
-        "startMoves": 3,
+        "pRandom": 0.0625,
+        "trapBits": 4,
+        "startMoves": 4,
         "startSafe": 1,
         "optimalSolutions": 1,
-        "states": 6
+        "states": 10
       }
     },
     {
