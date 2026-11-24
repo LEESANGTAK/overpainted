@@ -3,7 +3,8 @@
 // Two pieces with the same tempo and tonal centre (tools/music.mjs): `calm` and `lost`. Both play
 // all the time, looped with a crossfade at the seam; setLost() moves the balance between them slowly
 // (and closes a low-pass filter a little), so the change is felt rather than announced.
-// Browsers start audio only after a gesture: call unlock() from the first click or touch.
+// Browsers start audio only after a gesture: call preload() at page open and unlock() from the first
+// click, touch or key press.
 
 const FILES = { calm: 'audio/calm.mp3', lost: 'audio/lost.mp3' };
 const VOLUME = 0.42;     // music under everything
@@ -37,19 +38,28 @@ export function toggleMute() {
   return A.muted;
 }
 
-/** First gesture: open audio and start the music (if the files are there). */
+// Fetch and decode both pieces as soon as the page opens, so the first gesture can start them at once.
+// (An AudioContext made before a gesture starts suspended; decoding still works.)
+let loading = null;
+export function preload() {
+  if (loading) return loading;
+  const ctx = audioCtx();
+  if (!ctx) return (loading = Promise.resolve(false));
+  loading = Promise.all(Object.entries(FILES).map(async ([k, url]) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url}: ${res.status}`);
+    A.buffers[k] = await ctx.decodeAudioData(await res.arrayBuffer());
+  })).then(() => true, e => { console.info('music not loaded:', e.message); return false; });
+  return loading;
+}
+
+/** First gesture: open audio and start the music. */
 export async function unlock() {
   const ctx = audioCtx();
   if (!ctx || A.started) return;
   A.started = true;
-  try {
-    const entries = await Promise.all(Object.entries(FILES).map(async ([k, url]) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${url}: ${res.status}`);
-      return [k, await ctx.decodeAudioData(await res.arrayBuffer())];
-    }));
-    for (const [k, b] of entries) A.buffers[k] = b;
-  } catch (e) { console.info('music not loaded:', e.message); return; }
+  if (!await preload()) return;
+  if (ctx.state === 'suspended') await ctx.resume();
   A.lowpass = ctx.createBiquadFilter();
   A.lowpass.type = 'lowpass'; A.lowpass.frequency.value = 18000;
   A.lowpass.connect(A.master);
@@ -58,10 +68,10 @@ export async function unlock() {
     g.gain.value = 0;
     g.connect(A.lowpass);
     A.gains[k] = g;
-    loop(k, ctx.currentTime + 0.1);
+    loop(k, ctx.currentTime + 0.05);
   }
   // fade in to wherever the board stands now
-  apply(4);
+  apply(2);
 }
 
 // Play buffer k from `at`, and schedule the next pass so the two overlap by SEAM seconds.

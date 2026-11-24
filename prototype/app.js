@@ -1,7 +1,7 @@
 import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
-import { isMuted, toggleMute, unlock, setLost } from './mood.js';
+import { isMuted, toggleMute, unlock, preload, setLost } from './mood.js';
 import { t, lt, applyStatic, toggleLang } from './i18n.js';
 import { COLLECTOR_URL } from './config.js';
 let predictWeights = DEFAULT_WEIGHTS; // replaced by levels/predict-weights.json when present
@@ -877,8 +877,12 @@ function wire() {
     else if (k === 'm') onMute();
     else if (k === 'd' && IS_LOCAL) { $('devToggle').checked = !S.dev; $('devToggle').onchange({ target: $('devToggle') }); }
   });
-  // browsers only start audio after a gesture: open the pen's audio on the first touch or click
-  window.addEventListener('pointerdown', () => { if (!isMuted()) unlock(); }, { once: true });
+  // browsers only start audio after a gesture: the music is fetched at page open and starts on the
+  // first touch, click or key press
+  preload();
+  const firstGesture = () => { if (!isMuted()) unlock(); };
+  window.addEventListener('pointerdown', firstGesture, { once: true });
+  window.addEventListener('keydown', firstGesture, { once: true });
   const onResize = () => { if (S.def || S.mode === 'edit') renderBoard(); };
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => { onResize(); setTimeout(onResize, 120); });
