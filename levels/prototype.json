@@ -389,7 +389,15 @@
         "winAfterBait": "Same spot. Once it had done its guarding.",
         "winClean": "You let it stand guard first."
       },
-      "par": 4
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.067,
+        "trapBits": 3.9,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 2,
+        "states": 61
+      }
     },
     {
       "id": "p-twice",
@@ -1430,65 +1438,72 @@
         "startMoves": 3,
         "startSafe": 1,
         "optimalSolutions": 1,
-        "states": 6
+        "states": 6,
+        "pCareful": 1
       }
     },
     {
       "id": "p-orig2",
       "chapter": "orig",
-      "name": "Two of Three",
-      "note": "Three of a colour in one look. Take the overpaint, not the painting.",
+      "name": "Out of Its Sight",
+      "note": "The original looks along its row and column too. Pair the overpaint where it cannot see.",
       "rows": [
-        "A..B",
-        ".AB.",
-        "..AB"
+        "BBB.",
+        "A...",
+        "BA.A",
+        "B.AB"
       ],
       "orig": [
-        "...o",
-        ".o..",
-        "...."
+        "o...",
+        "....",
+        "....",
+        "...o"
       ],
       "ko": {
-        "name": "셋 중 둘",
-        "note": "한눈에 같은 색이 셋. 덧칠만 가져가고 그림은 두세요."
+        "name": "원본의 눈 밖에서",
+        "note": "원본도 가로세로로 봅니다. 원본의 눈이 닿지 않는 곳에서 짝을 지으세요."
       },
-      "par": 2,
+      "par": 3,
       "metrics": {
-        "pRandom": 0.0667,
-        "trapBits": 3.91,
+        "pRandom": 0.0167,
+        "trapBits": 5.91,
         "startMoves": 5,
         "startSafe": 1,
         "optimalSolutions": 1,
-        "states": 9
+        "states": 52,
+        "pCareful": 0.0667
       }
     },
     {
       "id": "p-orig3",
       "chapter": "orig",
-      "name": "A Pair That Isn't",
-      "note": "Two of a colour, facing each other. Not every pair is yours.",
+      "name": "Seven and One",
+      "note": "Seven reds to lift, and one red that stays. Every line it can see is closed to you.",
       "rows": [
-        "BA..",
+        "A.A.",
         "..AA",
-        "BAAA"
+        "..AA",
+        "A.A."
       ],
       "orig": [
-        "o...",
         "....",
-        "o..."
+        "...o",
+        "....",
+        "...."
       ],
       "ko": {
-        "name": "짝이 아닌 짝",
-        "note": "같은 색 둘이 마주 보고 있어도, 모든 짝이 내 몫은 아닙니다."
+        "name": "일곱과 하나",
+        "note": "벗길 빨강이 일곱, 남을 빨강이 하나. 그 하나가 보는 줄은 모두 닫혀 있습니다."
       },
       "par": 3,
       "metrics": {
-        "pRandom": 0.0417,
-        "trapBits": 4.58,
-        "startMoves": 4,
+        "pRandom": 0.0208,
+        "trapBits": 5.58,
+        "startMoves": 6,
         "startSafe": 1,
         "optimalSolutions": 1,
-        "states": 17
+        "states": 37,
+        "pCareful": 0.025
       }
     },
     {
@@ -1521,7 +1536,15 @@
         "winAfterBait": "Each one opened the way for the next.",
         "winClean": "You saw the whole chain."
       },
-      "par": 4
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0033,
+        "trapBits": 8.23,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 63
+      }
     },
     {
       "id": "p-hiding",
@@ -1559,7 +1582,15 @@
         "winAfterBait": "Same spot. This time the tape let only three answer.",
         "winClean": "You counted the red under the yellow."
       },
-      "par": 5
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0179,
+        "trapBits": 5.81,
+        "startMoves": 14,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 243
+      }
     },
     {
       "id": "p-sameside",
@@ -1596,7 +1627,15 @@
         "winAfterBait": "Same spot. This time the mix came as blue.",
         "winClean": "You put both mixes on the blue side."
       },
-      "par": 4
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0104,
+        "trapBits": 6.58,
+        "startMoves": 8,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 39
+      }
     },
     {
       "id": "p-third",
@@ -1635,7 +1674,15 @@
         "winAfterBait": "Same spot. This time three blues answered.",
         "winClean": "You counted what lay beneath."
       },
-      "par": 5
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0033,
+        "trapBits": 8.23,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 89
+      }
     },
     {
       "id": "p-redshare",
@@ -1673,7 +1720,15 @@
         "winAfterBait": "Same spot. This time the mix stayed red.",
         "winClean": "You kept one mix for the red."
       },
-      "par": 5
+      "par": 5,
+      "metrics": {
+        "pRandom": 0.0001,
+        "trapBits": 12.8,
+        "startMoves": 14,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 690
+      }
     },
     {
       "id": "p-11",

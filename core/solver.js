@@ -102,7 +102,9 @@ function step(board, hp, m) {
  * Full analysis from `hp` (defaults to the level start).
  * Throws SearchLimit if more than `maxStates` positions are reachable.
  */
-export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}) {
+// `careful`: model a player who never picks a strike that visibly lifts original paint (the damage
+// is plain to see), so pRandom measures what is left to think about once originals are avoided.
+export function analyze(board, { hp = board.initHp, maxStates = 1_000_000, careful = false } = {}) {
   if (board.nTiles > 255) throw new Error('Too many tiles for the solver (max 255)');
   const rays = buildRays(board);
   const memo = new Map();
@@ -119,7 +121,8 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}
     } else if (isClear(state, board.nPaint)) {
       r = { f: 0, p: 1, ways: 1, nMoves: 0, safe: 0 };
     } else {
-      const moves = movesFast(board, rays, state);
+      let moves = movesFast(board, rays, state);
+      if (careful) moves = moves.filter(m => !m.hits.some(t => t >= board.nPaint));
       if (moves.length === 0) {
         dead++;
         r = { f: Infinity, p: 0, ways: 0, nMoves: 0, safe: 0 };
@@ -153,7 +156,7 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}
       let chosen = null;
       for (const m of movesFast(board, rays, state)) {
         const next = step(board, state, m);
-        if (memo.get(keyOf(next)).f === want) { chosen = { m, next }; break; }
+        if (memo.get(keyOf(next))?.f === want) { chosen = { m, next }; break; } // (careful: ruinous moves were never visited)
       }
       solution.push({ cell: chosen.m.cell, hits: chosen.m.hits, ...(chosen.m.tape ? { tape: true } : {}) });
       state = chosen.next;

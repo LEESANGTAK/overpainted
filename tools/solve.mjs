@@ -29,6 +29,8 @@ for (const def of levels) {
         startMoves: a.startMoves, startSafe: a.startSafe,
         optimalSolutions: a.optimalSolutions, states: a.states,
       };
+      // with original paint, also the solve rate for a player who simply avoids lifting originals
+      if (board.nPaint < board.nTiles) def.metrics.pCareful = +analyze(board, { maxStates, careful: true }).pRandom.toFixed(4);
     }
   } catch (e) {
     if (!(e instanceof SearchLimit)) throw e;
