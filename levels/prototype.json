@@ -1572,6 +1572,31 @@
       }
     },
     {
+      "id": "p-palette1",
+      "chapter": "tools",
+      "name": "Mixed on the Spot",
+      "note": "One red, with no partner. The palette mixes the two pigments a cell can see. Choose where, and when.",
+      "rows": [
+        "BA.",
+        "..B",
+        ".BB"
+      ],
+      "palette": 1,
+      "ko": {
+        "name": "그 자리에서 섞기",
+        "note": "빨강 하나에 짝이 없습니다. 팔레트는 그 칸에서 보이는 두 색을 섞습니다. 어디서, 언제 섞을지 고르세요."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0333,
+        "trapBits": 4.91,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 25
+      }
+    },
+    {
       "id": "p-chain",
       "chapter": "together",
       "name": "Chain",

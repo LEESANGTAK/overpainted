@@ -38,14 +38,20 @@
 // its pigments moves to an empty neighbouring cell (up/right/down/left), the other stays. Both are
 // then ordinary single-layer overpaint tiles.
 //
-// Retouch dabs and split halves are ADDED tiles. They live in the state, one slot per cell, and
+// Palette (optional `palette: N`): up to N times, the player may mix a dab on an empty cell from
+// what that cell sees: if the tiles it would see (up/right/down/left, as a strike looks) show
+// exactly two pigments, a dab of those two pigments mixed is put there. It is overpaint (it has to
+// come off too) and pairs like a mixed tile, with either of its pigments.
+//
+// Retouch dabs, split halves and palette dabs are ADDED tiles. They live in the state, one slot per cell, and
 // are identified by `board.offAdd + cell` wherever a tile index is expected (hits, maskOf, ...).
 // Placing a dab, splitting and taping each cost a move, like a strike.
 //
 // State (`hp`): one byte per tile = layers left. On a level with tape or tools, w*h more bytes
 // follow, one per cell: 1 = taped. On a level with tools (retouch/split) three more blocks follow:
-// w*h "added tile here" bytes (1 = a live added tile), w*h added-tile pigments, then one "used"
-// byte per retouch dab and one byte counting splits used. Use board.nTiles (not hp.length) to
+// w*h "added tile here" bytes (1 = a live added tile), w*h added-tile pigment masks (bit k =
+// pigment k), then one "used" byte per retouch dab, one byte counting splits used and one byte
+// counting palette dabs used. Use board.nTiles (not hp.length) to
 // walk the original tiles.
 
 export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // up, right, down, left
@@ -75,7 +81,8 @@ export function parseLevel(def) {
     return k;
   });
   const split = Math.max(0, def.split | 0);
-  const tools = retouch.length > 0 || split > 0;
+  const palette = Math.max(0, def.palette | 0);
+  const tools = retouch.length > 0 || split > 0 || palette > 0;
   // two passes: overpaint tiles first, then originals, so originals take the highest indices
   for (const pass of [0, 1]) for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -113,7 +120,7 @@ export function parseLevel(def) {
   }
   const nTilesAll = tileCell.length;
   const offAdd = nTilesAll + w * h; // (only meaningful when tools)
-  const extraBytes = tools ? 3 * w * h + retouch.length + 1 : tape > 0 ? w * h : 0;
+  const extraBytes = tools ? 3 * w * h + retouch.length + 2 : tape > 0 ? w * h : 0;
   return {
     id: def.id, name: def.name ?? def.id ?? 'untitled', note: def.note ?? '', par: def.par,
     w, h, tileAt, blocked,
@@ -127,8 +134,9 @@ export function parseLevel(def) {
     tape, // masking tape the player may use (0 = none)
     retouch, // pigments of the retouch dabs the player has (one each)
     split,   // splits the player may make
+    palette, // palette dabs the player may mix
     tools,   // the state carries added tiles (retouch or split on this level)
-    offAdd, offCol: offAdd + w * h, offRetouch: offAdd + 2 * w * h, offSplit: offAdd + 2 * w * h + retouch.length,
+    offAdd, offCol: offAdd + w * h, offRetouch: offAdd + 2 * w * h, offSplit: offAdd + 2 * w * h + retouch.length, offPalette: offAdd + 2 * w * h + retouch.length + 1,
   };
 }
 
@@ -139,13 +147,13 @@ export function isAdded(board, id) {
 
 /** Pigment index tile t shows in state hp. */
 export function colorOf(board, hp, t) {
-  if (isAdded(board, t)) return hp[board.offCol + (t - board.offAdd)];
+  if (isAdded(board, t)) return 31 - Math.clz32(hp[board.offCol + (t - board.offAdd)]); // (its highest pigment)
   return hp[t] >= 2 ? board.tileColor[t] : board.underColor[t];
 }
 
 /** Pigments tile t counts as in state hp, as a bitmask (bit k = pigment k). Two tiles pair if their masks overlap. */
 export function maskOf(board, hp, t) {
-  if (isAdded(board, t)) return 1 << colorOf(board, hp, t);
+  if (isAdded(board, t)) return hp[board.offCol + (t - board.offAdd)];
   const m = board.mixColor[t];
   return (1 << colorOf(board, hp, t)) | (m >= 0 && hp[t] === 1 ? 1 << m : 0);
 }
@@ -185,7 +193,7 @@ export function canRetouch(board, hp, i, c) {
 /** New state with retouch dab i on cell c. */
 export function applyRetouch(board, hp, i, c) {
   const n = hp.slice();
-  n[board.offAdd + c] = 1; n[board.offCol + c] = board.retouch[i]; n[board.offRetouch + i] = 1;
+  n[board.offAdd + c] = 1; n[board.offCol + c] = 1 << board.retouch[i]; n[board.offRetouch + i] = 1;
   return n;
 }
 
@@ -213,15 +221,51 @@ export function applySplit(board, hp, t, c, k) {
   const from = board.tileCell[t];
   const stay = k === board.tileColor[t] ? board.mixColor[t] : board.tileColor[t];
   n[t] = 0;
-  n[board.offAdd + from] = 1; n[board.offCol + from] = stay;
-  n[board.offAdd + c] = 1; n[board.offCol + c] = k;
+  n[board.offAdd + from] = 1; n[board.offCol + from] = 1 << stay;
+  n[board.offAdd + c] = 1; n[board.offCol + c] = 1 << k;
   n[board.offSplit]++;
   return n;
 }
 
+/** Palette dabs still available. */
+export function paletteLeft(board, hp) {
+  return board.palette ? board.palette - hp[board.offPalette] : 0;
+}
+
+/** Pigments a palette dab on empty cell c would mix (a bitmask of exactly two), or 0 if it cannot. */
+export function paletteMask(board, hp, c) {
+  const r = probe(board, hp, c);
+  if (!r) return 0;
+  let m = 0;
+  for (const ray of r.rays) if (ray.tile >= 0) m |= maskOf(board, hp, ray.tile);
+  let bits = 0;
+  for (let k = m; k; k &= k - 1) bits++;
+  return bits === 2 ? m : 0;
+}
+
+/** True if a palette dab can be mixed on cell c now. */
+export function canPalette(board, hp, c) {
+  return paletteLeft(board, hp) > 0 && paletteMask(board, hp, c) !== 0;
+}
+
+/** New state with a palette dab mixed on cell c. */
+export function applyPalette(board, hp, c) {
+  const m = paletteMask(board, hp, c);
+  const n = hp.slice();
+  n[board.offAdd + c] = 1; n[board.offCol + c] = m; n[board.offPalette]++;
+  return n;
+}
+
+/** Pigments of an added tile, as a list (one, or two for a palette dab). */
+export function addedPigments(board, hp, c) {
+  const m = hp[board.offCol + c], out = [];
+  for (let k = 0; k < MAX_COLORS; k++) if (m & (1 << k)) out.push(k);
+  return out;
+}
+
 /**
- * Every tool move in this state (not strikes): tape, retouch and split.
- * Returns [{tape:true, cell} | {retouch:i, cell} | {split:t, cell, color}].
+ * Every tool move in this state (not strikes): tape, retouch, split and palette.
+ * Returns [{tape:true, cell} | {retouch:i, cell} | {split:t, cell, color} | {palette:true, cell}].
  */
 export function listToolMoves(board, hp) {
   const out = [], N = board.w * board.h;
@@ -245,6 +289,7 @@ export function listToolMoves(board, hp) {
         for (const k of [board.tileColor[t], board.mixColor[t]]) out.push({ split: t, cell: c, color: k });
       }
     }
+    if (paletteLeft(board, hp) > 0) for (let c = 0; c < N; c++) if (paletteMask(board, hp, c)) out.push({ palette: true, cell: c });
   }
   return out;
 }
@@ -253,6 +298,7 @@ export function listToolMoves(board, hp) {
 export function applyToolMove(board, hp, m) {
   if (m.tape) return applyTape(board, hp, m.cell);
   if (m.retouch != null) return applyRetouch(board, hp, m.retouch, m.cell);
+  if (m.palette) return applyPalette(board, hp, m.cell);
   return applySplit(board, hp, m.split, m.cell, m.color);
 }
 

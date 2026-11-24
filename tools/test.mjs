@@ -1,7 +1,7 @@
 // Rules + solver checks.   node tools/test.mjs
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, toOrig, canTape, applyTape, tapeLeft, isTaped, isRuined, isWon, isOriginal, paintGone, listToolMoves, applyToolMove, applyRetouch, canRetouch, retouchLeft, applySplit, canSplit, splitLeft, tileOn, maskOf, layersLeft } from '../core/rules.js';
+import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, toOrig, canTape, applyTape, tapeLeft, isTaped, isRuined, isWon, isOriginal, paintGone, listToolMoves, applyToolMove, applyRetouch, canRetouch, retouchLeft, applySplit, canSplit, splitLeft, tileOn, maskOf, layersLeft, canPalette, applyPalette, paletteMask, paletteLeft } from '../core/rules.js';
 import { analyze } from '../core/solver.js';
 import { matchTrap, checkTraps } from '../core/traps.js';
 
@@ -161,7 +161,7 @@ test('fast solver agrees with reference on random boards', () => {
     // mix some single-layer tiles with a second pigment
     const mix = rows.map(r => [...r].map(ch => 'ABC'.includes(ch) && rnd() < 0.3 ? 'ABC'[('ABC'.indexOf(ch) + 1 + Math.floor(rnd() * 2)) % 3] : '.').join(''));
     const b = parseLevel({ rows, under: under.map((u, y) => [...u].map((c, x) => (mix[y][x] !== '.' ? '.' : c)).join('')), mix, tape: i % 3 === 0 ? 1 + (i % 2) : 0,
-      retouch: i % 5 === 1 ? 'A' : i % 5 === 3 ? 'AB' : '', split: i % 4 === 2 ? 1 : 0 });
+      retouch: i % 5 === 1 ? 'A' : i % 5 === 3 ? 'AB' : '', split: i % 4 === 2 ? 1 : 0, palette: i % 7 === 4 ? 1 : 0 });
     if (b.tools && b.w * b.h > 16) continue; // keep the slow reference quick
     const fast = analyze(b), slow = slowSolve(b);
     assert.equal(fast.solvable, slow.f < Infinity, rows.join('/'));
@@ -174,6 +174,7 @@ test('fast solver agrees with reference on random boards', () => {
         if (st.tape) { assert.ok(canTape(b, hp, st.cell)); hp = applyTape(b, hp, st.cell); continue; }
         if (st.retouch != null) { assert.ok(canRetouch(b, hp, st.retouch, st.cell)); hp = applyRetouch(b, hp, st.retouch, st.cell); continue; }
         if (st.split != null) { assert.ok(canSplit(b, hp, st.split, st.cell, st.color)); hp = applySplit(b, hp, st.split, st.cell, st.color); continue; }
+        if (st.palette) { assert.ok(canPalette(b, hp, st.cell)); hp = applyPalette(b, hp, st.cell); continue; }
         const r = probe(b, hp, st.cell);
         assert.ok(r && r.hits.length >= 2);
         hp = applyHits(hp, r.hits);
@@ -287,6 +288,21 @@ test('split: a mixed tile becomes two, one pigment moves to an empty neighbour',
   assert.equal(splitLeft(b, hp), 0);
   assert.equal(layersLeft(b, hp), 5);
   assert.ok(analyze(b).solvable === analyze(b).solvable); // (analysed without error)
+});
+
+test('palette: a dab mixed from exactly the two pigments its cell sees', () => {
+  // A . . B . B : from (2,0) the cell sees red (left) and blue (right) -> a red-blue dab there
+  const rows = ['A..B.B'];
+  const b = parseLevel({ rows, palette: 1 });
+  assert.equal(paletteMask(b, b.initHp, 2), 0b11);
+  assert.equal(paletteMask(b, b.initHp, 4), 0, 'sees only blue');
+  const hp = applyPalette(b, b.initHp, 2);
+  assert.equal(maskOf(b, hp, tileOn(b, hp, 2)), 0b11);
+  assert.ok(!canPalette(b, hp, 1) && paletteLeft(b, hp) === 0);
+  // one red and two blues: the mixed dab partners the lone red, then the blues pair
+  const a = analyze(b);
+  assert.ok(a.solvable && a.minStrikes === 3 && a.solution[0].palette && a.solution[0].cell === 2);
+  assert.ok(!analyze(parseLevel({ rows })).solvable);
 });
 
 console.log(`\n${n} tests passed`);

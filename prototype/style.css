@@ -430,3 +430,23 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
 #toolWheel .slot .piece:not(.dab):not(.knife)::after { transform: rotate(-45deg); }
 #toolWheel .slot .piece.dab { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffffff66, transparent 45%), var(--c); }
 #toolWheel .slot .piece.knife { background: linear-gradient(135deg, var(--p0) 0 46%, transparent 46% 54%, var(--p1) 54%); border-radius: 40%; }
+
+/* the palette: a small wooden palette with two blobs; armed, every empty cell where it can mix
+   shows the two pigments it would mix there */
+#tapeTray .piece.palette, #toolWheel .slot .piece.palette, .tape-ghost.palette-ghost {
+  border-radius: 50% 45% 55% 40%;
+  background:
+    radial-gradient(circle at 34% 40%, var(--p0) 0 17%, transparent 18%),
+    radial-gradient(circle at 64% 34%, var(--p1) 0 17%, transparent 18%),
+    radial-gradient(circle at 60% 70%, #1b130b 0 10%, transparent 11%),
+    linear-gradient(#b8915c, #8a6538);
+  box-shadow: 0 2px 4px #0008;
+}
+#tapeTray .piece.palette::before, #tapeTray .piece.palette::after { content: none; }
+#tapeTray .piece.palette.used { background: none; box-shadow: none; }
+#board .cell.can-palette::after {
+  content: ''; position: absolute; inset: 26%; border-radius: 50%; opacity: .75;
+  background: linear-gradient(135deg, var(--c) 0 50%, var(--c2) 50%);
+  box-shadow: 0 0 0 2px #fbf3dc88;
+}
+#board.paletting .cell.empty:not(.can-palette) { cursor: not-allowed; }

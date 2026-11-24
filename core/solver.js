@@ -41,7 +41,7 @@ function movesFast(board, rays, hp) {
   const { tileAt, blocked, tileColor, underColor, mixColor, nTiles, tools, offAdd, offCol } = board;
   // pigments a tile counts as (bitmask); a mixed single tile counts as both of its pigments;
   // an added tile (id >= offAdd) is one pigment, stored in the state
-  const mask = t => t >= offAdd && tools ? 1 << hp[offCol + (t - offAdd)]
+  const mask = t => t >= offAdd && tools ? hp[offCol + (t - offAdd)]
     : (1 << (hp[t] >= 2 ? tileColor[t] : underColor[t])) | (mixColor[t] >= 0 && hp[t] === 1 ? 1 << mixColor[t] : 0);
   const N = board.w * board.h;
   const taped = board.tape > 0 || tools ? cc => hp[nTiles + cc] === 1 : () => false;
@@ -97,7 +97,7 @@ function keyOf(hp) {
 }
 
 function step(board, hp, m) {
-  if (m.retouch != null || m.split != null) return applyToolMove(board, hp, m);
+  if (m.retouch != null || m.split != null || m.palette) return applyToolMove(board, hp, m);
   const n = hp.slice();
   if (m.tape) n[board.nTiles + m.cell] = 1;
   else for (const t of m.hits) n[t]--;
@@ -105,7 +105,7 @@ function step(board, hp, m) {
 }
 
 /** The fields that say what a move is, for solutions and hints. */
-const moveOut = m => ({ cell: m.cell, hits: m.hits, ...(m.tape ? { tape: true } : {}), ...(m.retouch != null ? { retouch: m.retouch } : {}), ...(m.split != null ? { split: m.split, color: m.color } : {}) });
+const moveOut = m => ({ cell: m.cell, hits: m.hits, ...(m.tape ? { tape: true } : {}), ...(m.retouch != null ? { retouch: m.retouch } : {}), ...(m.split != null ? { split: m.split, color: m.color } : {}), ...(m.palette ? { palette: true } : {}) });
 
 /**
  * Full analysis from `hp` (defaults to the level start).

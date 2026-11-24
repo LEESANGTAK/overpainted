@@ -1,4 +1,4 @@
-import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, toOrig, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft, isOriginal, isRuined, isWon, cellOf, retouchLeft, canRetouch, applyRetouch, splitLeft, canSplitTile, canSplit, applySplit, listToolMoves } from '../core/rules.js';
+import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, toOrig, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft, isOriginal, isRuined, isWon, cellOf, retouchLeft, canRetouch, applyRetouch, splitLeft, canSplitTile, canSplit, applySplit, listToolMoves, paletteLeft, paletteMask, canPalette, applyPalette, addedPigments, isEmpty } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { isMuted, toggleMute, unlock, preload, setLost } from './mood.js';
@@ -194,6 +194,7 @@ function renderBoard() {
   const el = $('board');
   el.classList.toggle('edit', S.mode === 'edit');
   el.classList.toggle('taping', S.mode === 'play' && (S.tool?.kind === 'tape' || S.tool?.kind === 'retouch'));
+  el.classList.toggle('paletting', S.mode === 'play' && S.tool?.kind === 'palette');
   el.style.setProperty('--s', s + 'px');
   el.style.gridTemplateColumns = `repeat(${b.w}, ${s}px)`;
   el.style.gridAutoRows = s + 'px';
@@ -204,7 +205,7 @@ function renderBoard() {
     if (isTaped(b, hp, c)) { html += `<div class="cell taped" data-c="${c}"><div class="tape"></div></div>`; continue; }
     const dab = dabStyle(id, c);
     // an added tile (a retouch dab or a split half) sits on top of whatever the cell had
-    if (b.tools && hp[b.offAdd + c]) { const k = hp[b.offCol + c]; html += `<div class="cell added" data-c="${c}">${tileHtml(k, false, k, dab)}</div>`; continue; }
+    if (b.tools && hp[b.offAdd + c]) { const [k, k2 = -1] = addedPigments(b, hp, c); html += `<div class="cell added" data-c="${c}">${tileHtml(k, false, k, dab, k2)}</div>`; continue; }
     const t = b.tileAt[c];
     // original paint: the painting itself, dull and crazed; once lifted, a raw loss in the canvas
     if (t >= 0 && isOriginal(b, t)) { html += hp[t] > 0 ? `<div class="cell orig" data-c="${c}">${tileHtml(b.tileColor[t], false, b.tileColor[t], dab)}</div>` : `<div class="cell ruin" data-c="${c}"><div class="loss"></div></div>`; continue; }
@@ -383,7 +384,7 @@ function loadLevel(def) {
   $('overlay').hidden = true;
   showMode();
   renderBoard(); renderList(); updateHud(); renderDev();
-  log('level_start', { chapter: def.chapter ?? null, rows: def.rows, under: def.under, mix: def.mix, orig: def.orig, tape: def.tape || undefined, retouch: def.retouch || undefined, split: def.split || undefined, par: def.par ?? null, dev: S.dev });
+  log('level_start', { chapter: def.chapter ?? null, rows: def.rows, under: def.under, mix: def.mix, orig: def.orig, tape: def.tape || undefined, retouch: def.retouch || undefined, split: def.split || undefined, palette: def.palette || undefined, par: def.par ?? null, dev: S.dev });
   try { localStorage.setItem(STORE_KEY + '.last', def.id); } catch { }
 }
 
@@ -399,11 +400,13 @@ function toolsOf() { // tools the player can pick up now (one entry per kind; da
   const seen = new Set();
   for (const i of retouchLeft(b, hp)) if (!seen.has(b.retouch[i])) { seen.add(b.retouch[i]); out.push({ kind: 'retouch', i }); }
   if (splitLeft(b, hp) > 0) out.push({ kind: 'split' });
+  if (paletteLeft(b, hp) > 0) out.push({ kind: 'palette' });
   return out;
 }
 const sameTool = (a, b) => !!a && !!b && a.kind === b.kind && (a.kind !== 'retouch' || S.board.retouch[a.i] === S.board.retouch[b.i]);
 const toolIcon = tool => tool.kind === 'tape' ? '<div class="piece"></div>'
-  : tool.kind === 'retouch' ? `<div class="piece dab" style="--c:var(--p${S.board.retouch[tool.i]})"></div>` : '<div class="piece knife"></div>';
+  : tool.kind === 'retouch' ? `<div class="piece dab" style="--c:var(--p${S.board.retouch[tool.i]})"></div>`
+  : tool.kind === 'palette' ? '<div class="piece palette"></div>' : '<div class="piece knife"></div>';
 
 function renderTray() {
   const tray = $('tapeTray'), b = S.board;
@@ -422,6 +425,8 @@ function renderTray() {
   });
   const splits = splitLeft(b, hp);
   for (let i = 0; i < b.split; i++) html += `<div class="piece knife${i >= splits ? ' used' : tool?.kind === 'split' ? ' armed' : ''}" data-tool="split"></div>`;
+  const palettes = paletteLeft(b, hp);
+  for (let i = 0; i < b.palette; i++) html += `<div class="piece palette${i >= palettes ? ' used' : tool?.kind === 'palette' ? ' armed' : ''}" data-tool="palette"></div>`;
   tray.classList.toggle('off', S.won || !toolsOf().length);
   tray.title = t(b.tools ? 'toolTip' : 'tapeTip');
   tray.innerHTML = html;
@@ -432,7 +437,8 @@ function trayDown(e) {
   e.preventDefault();
   const tool = { kind: piece.dataset.tool, ...(piece.dataset.i != null ? { i: +piece.dataset.i } : {}) };
   const canDrop = tool.kind === 'tape' ? c => canTape(S.board, S.hp, c)
-    : tool.kind === 'retouch' ? c => canRetouch(S.board, S.hp, tool.i, c) : null; // the knife is click-only
+    : tool.kind === 'retouch' ? c => canRetouch(S.board, S.hp, tool.i, c)
+    : tool.kind === 'palette' ? c => canPalette(S.board, S.hp, c) : null; // the knife is click-only
   const x0 = e.clientX, y0 = e.clientY;
   // with a finger (Steam Deck touchscreen) the piece rides above the fingertip, and the cell under
   // the piece -- not under the finger -- is where it lands, so the target is never hidden
@@ -449,7 +455,7 @@ function trayDown(e) {
     if (!ghost && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;
     if (!ghost) {
       ghost = document.createElement('div');
-      ghost.className = tool.kind === 'tape' ? 'tape-ghost' : 'tape-ghost dab-ghost';
+      ghost.className = tool.kind === 'tape' ? 'tape-ghost' : tool.kind === 'palette' ? 'tape-ghost dab-ghost palette-ghost' : 'tape-ghost dab-ghost';
       if (tool.kind === 'retouch') ghost.style.setProperty('--c', `var(--p${S.board.retouch[tool.i]})`);
       ghost.style.width = S.size + 'px'; // cell-sized: what you drag is what lands
       ghost.style.height = S.size + 'px';
@@ -472,7 +478,7 @@ function trayDown(e) {
     piece.classList.remove('lifted');
     const c = target(ev); // where it is let go, not where it last moved
     mark(-1);
-    if (c >= 0 && ev.type === 'pointerup') { if (tool.kind === 'tape') placeTape(c, 'drag'); else placeRetouch(tool.i, c, 'drag'); }
+    if (c >= 0 && ev.type === 'pointerup') { if (tool.kind === 'tape') placeTape(c, 'drag'); else if (tool.kind === 'palette') placePalette(c, 'drag'); else placeRetouch(tool.i, c, 'drag'); }
   };
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', end);
@@ -486,7 +492,7 @@ function armTool(tool) {
   else {
     const have = toolsOf().find(x => sameTool(x, tool));
     if (!have) return;
-    S.tool = tool.kind === 'retouch' ? { kind: 'retouch', i: tool.i } : tool.kind === 'split' ? { kind: 'split', stage: 'pick' } : { kind: 'tape' };
+    S.tool = tool.kind === 'retouch' ? { kind: 'retouch', i: tool.i } : tool.kind === 'split' ? { kind: 'split', stage: 'pick' } : { kind: tool.kind };
     S.lastTool = S.tool;
   }
   redrawTool();
@@ -500,6 +506,7 @@ function toolAt(c) {
   const tool = S.tool, b = S.board;
   if (tool.kind === 'tape') return placeTape(c);
   if (tool.kind === 'retouch') return placeRetouch(tool.i, c);
+  if (tool.kind === 'palette') return placePalette(c);
   const t = b.tileAt[c];
   if (tool.stage !== 'color' && t >= 0 && canSplitTile(b, S.hp, t)) S.tool = { ...tool, stage: 'where', t }; // (another) mixed tile
   else if (tool.stage === 'where' && canSplit(b, S.hp, tool.t, c, b.tileColor[tool.t])) S.tool = { ...tool, stage: 'color', cell: c, k: b.mixColor[tool.t] };
@@ -532,6 +539,23 @@ function placeRetouch(i, c, via = 'click') {
   renderBoard();
   afterMove();
 }
+function placePalette(c, via = 'click') {
+  S.tool = null;
+  if (!canPalette(S.board, S.hp, c)) { // only where exactly two pigments are seen
+    renderBoard(); updateHud();
+    if (isEmpty(S.board, S.hp, c)) { $('status').textContent = t('paletteNo'); $('status').className = ''; }
+    return;
+  }
+  S.hintCell = -1;
+  clearRays();
+  const m = paletteMask(S.board, S.hp, c);
+  log('palette', { cell: c, colors: [...COLOR_CHARS].filter((_, k) => m & (1 << k)).join(''), via: S.replaying ? undefined : via, replay: !!S.replaying || undefined });
+  S.hist.push(S.hp);
+  S.hp = applyPalette(S.board, S.hp, c);
+  noteBlunder();
+  renderBoard();
+  afterMove();
+}
 function doSplit(t, c, k) {
   S.tool = null;
   if (!canSplit(S.board, S.hp, t, c, k)) { renderBoard(); updateHud(); return; }
@@ -550,6 +574,16 @@ function doSplit(t, c, k) {
 function renderToolMarks() {
   const pick = $('splitPick'), tool = S.tool, b = S.board;
   pick.hidden = true;
+  if (S.mode === 'play' && tool?.kind === 'palette') {
+    for (let c = 0; c < b.w * b.h; c++) {
+      const m = paletteMask(b, S.hp, c), el = cellEl(c);
+      if (!m || !el) continue;
+      const [k1, k2] = [0, 1, 2, 3, 4, 5].filter(k => m & (1 << k));
+      el.classList.add('can-palette');
+      el.style.setProperty('--c', `var(--p${k1})`); el.style.setProperty('--c2', `var(--p${k2})`);
+    }
+    return;
+  }
   if (S.mode !== 'play' || tool?.kind !== 'split') return;
   if (tool.stage === 'pick') for (let t = 0; t < b.nTiles; t++) { if (canSplitTile(b, S.hp, t)) cellEl(b.tileCell[t])?.classList.add('can-split'); }
   if (tool.stage === 'where' || tool.stage === 'color') {
@@ -745,13 +779,14 @@ function hint() {
     catch { $('status').textContent = t('hintTooBig'); return; }
   } else if (a.solvable) first = a.solution[0];
   else lost = true;
-  log('hint', lost ? { lost: true } : { cell: first.cell, tape: first.tape || undefined, retouch: first.retouch, split: first.split });
+  log('hint', lost ? { lost: true } : { cell: first.cell, tape: first.tape || undefined, retouch: first.retouch, split: first.split, palette: first.palette });
   if (lost) { $('status').textContent = t('hintLost'); $('status').className = 'bad'; return; }
   S.hints++;
   S.hintCell = first.cell;
   cellEl(first.cell)?.classList.add('hint');
   if (first.tape) { $('status').textContent = t(S.padActive ? 'hintTapePad' : 'hintTape'); $('status').className = ''; }
   else if (first.retouch != null) { $('status').textContent = t('hintRetouch'); $('status').className = ''; }
+  else if (first.palette) { $('status').textContent = t('hintPalette'); $('status').className = ''; }
   else if (first.split != null) { cellEl(S.board.tileCell[first.split])?.classList.add('split-from'); $('status').textContent = t('hintSplit'); $('status').className = ''; }
 }
 
@@ -766,6 +801,7 @@ async function replaySolution() {
       if (S.mode !== 'play') return;
       if (st.tape) placeTape(st.cell);
       else if (st.retouch != null) placeRetouch(st.retouch, st.cell);
+      else if (st.palette) placePalette(st.cell);
       else if (st.split != null) doSplit(st.split, st.cell, st.color);
       else await strikeAt(st.cell);
       await sleep(380);
@@ -789,7 +825,7 @@ function setEditRows(rows, def, under = null, mix = null, orig = null) {
   S.edit.orig = rows.map((_, y) => (orig?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
   S.edit.info = null;
   $('editW').value = w; $('editH').value = rows.length;
-  if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; $('editTape').value = def.tape ?? 0; $('editRetouch').value = def.retouch ?? ''; $('editSplit').value = def.split ?? 0; }
+  if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; $('editTape').value = def.tape ?? 0; $('editRetouch').value = def.retouch ?? ''; $('editSplit').value = def.split ?? 0; $('editPalette').value = def.palette ?? 0; }
   $('editStats').innerHTML = '';
 }
 function renderPalette() {
@@ -836,6 +872,8 @@ function editDef() {
   if (retouch) def.retouch = retouch;
   const split = Math.max(0, Math.min(3, +$('editSplit').value | 0));
   if (split) def.split = split;
+  const palette = Math.max(0, Math.min(3, +$('editPalette').value | 0));
+  if (palette) def.palette = palette;
   return def;
 }
 function runEditAnalysis() {
@@ -1085,7 +1123,7 @@ function wire() {
     const h = e.target.closest('.half');
     if (h && S.tool?.stage === 'color') doSplit(S.tool.t, S.tool.cell, +h.dataset.k);
   });
-  $('editTape').onchange = $('editRetouch').onchange = $('editSplit').onchange = () => { S.edit.info = null; };
+  $('editTape').onchange = $('editRetouch').onchange = $('editSplit').onchange = $('editPalette').onchange = () => { S.edit.info = null; };
   $('restart').onclick = restart;
   $('hint').onclick = hint;
   $('devToggle').onchange = e => { S.dev = e.target.checked; log('dev', { on: S.dev }); if (S.dev) refreshNow(); renderDev(); updateHud(); };
@@ -1132,6 +1170,7 @@ function wire() {
     if (def.tape) out.tape = def.tape;
     if (def.retouch) out.retouch = def.retouch;
     if (def.split) out.split = def.split;
+    if (def.palette) out.palette = def.palette;
     if (a && a !== 'big' && a.solvable) out.par = a.minStrikes;
     $('json').value = JSON.stringify(out, null, 2);
   };
