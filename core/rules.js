@@ -14,6 +14,13 @@
 // it. "A" in rows + "B" in mix = a tile of red and blue together; it pairs with red, with blue,
 // and with another mixed tile that shares either. (Only single-layer tiles can be mixed.)
 //
+// Optional `orig` rows (same size): any letter (by convention 'o') on a single-layer, unmixed tile
+// marks it as ORIGINAL paint -- part of the painting, not overpaint. It is seen and pairs like any
+// tile, but it must never be lifted: a strike that lifts it ruins the painting (the attempt is lost).
+// The level is cleared when every overpaint tile is gone and no original was lifted.
+// Original tiles get the highest tile indices (after all overpaint), so `board.nPaint` = number
+// of overpaint tiles and isClear(hp, board.nPaint) ignores the originals.
+//
 // A strike targets an EMPTY cell. From it, look up/right/down/left and take the nearest
 // non-empty cell in each direction (old tape stops the look and yields nothing).
 // Among those (up to 4) tiles, every tile that shares a pigment with at least one of the others
@@ -42,11 +49,19 @@ export function parseLevel(def) {
   if (under != null && (!Array.isArray(under) || under.length !== h)) throw new Error('`under` must have one row per row');
   const mix = def.mix;
   if (mix != null && (!Array.isArray(mix) || mix.length !== h)) throw new Error('`mix` must have one row per row');
+  const orig = def.orig;
+  if (orig != null && (!Array.isArray(orig) || orig.length !== h)) throw new Error('`orig` must have one row per row');
+  const isOrig = (x, y) => { const o = orig?.[y]?.[x] ?? '.'; return o !== '.' && o !== ' '; };
   const tileCell = [], tileColor = [], underColor = [], mixColor = [], initHp = [];
+  let nPaint = 0;
   const tape = Math.max(0, def.tape | 0);
-  for (let y = 0; y < h; y++) {
+  // two passes: overpaint tiles first, then originals, so originals take the highest indices
+  for (const pass of [0, 1]) for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const ch = rows[y][x] ?? '.';
+      const original = isOrig(x, y), empty = ch === '#' || ch === '.' || ch === ' ';
+      if (original && empty) throw new Error(`Original at ${x},${y} is not on a paint tile`);
+      if (empty ? pass === 1 : original !== (pass === 1)) continue; // walls and empties once; originals in pass 1
       const c = y * w + x;
       const mixHere = mix?.[y]?.[x] ?? '.';
       if ((ch === '#' || ch === '.' || ch === ' ') && mixHere !== '.' && mixHere !== ' ') throw new Error(`Mix at ${x},${y} is not on a paint tile`);
@@ -69,7 +84,9 @@ export function parseLevel(def) {
         const km = mch === '.' || mch === ' ' ? -1 : COLOR_CHARS.indexOf(mch.toUpperCase());
         if (mch !== '.' && mch !== ' ' && km < 0) throw new Error(`Unknown mix pigment '${mch}' at ${x},${y}`);
         if (km >= 0 && (initHp.at(-1) !== 1 || km === k)) throw new Error(`Mix at ${x},${y} needs a single-layer tile of another pigment`);
+        if (original && (initHp.at(-1) !== 1 || km >= 0)) throw new Error(`Original at ${x},${y} must be a single-layer, unmixed tile`);
         mixColor.push(km);
+        if (pass === 0) nPaint++;
       }
     }
   }
@@ -82,6 +99,7 @@ export function parseLevel(def) {
     mixColor: Int8Array.from(mixColor),      // second pigment of a mixed single tile (-1 = none)
     initHp: Uint8Array.from(tape > 0 ? [...initHp, ...new Array(w * h).fill(0)] : initHp),
     nTiles: tileCell.length,
+    nPaint, // overpaint tiles (indices 0..nPaint-1); the rest, up to nTiles, are original paint
     tape, // masking tape the player may use (0 = none)
   };
 }
@@ -95,6 +113,22 @@ export function colorOf(board, hp, t) {
 export function maskOf(board, hp, t) {
   const m = board.mixColor[t];
   return (1 << colorOf(board, hp, t)) | (m >= 0 && hp[t] === 1 ? 1 << m : 0);
+}
+
+/** True if tile t is original paint (must not be lifted). */
+export function isOriginal(board, t) {
+  return t >= board.nPaint && t < board.nTiles;
+}
+
+/** True if some original tile has been lifted in state hp: the attempt is lost. */
+export function isRuined(board, hp) {
+  for (let t = board.nPaint; t < board.nTiles; t++) if (hp[t] === 0) return true;
+  return false;
+}
+
+/** Cleared: no overpaint left and no original lifted. */
+export function isWon(board, hp) {
+  return isClear(hp, board.nPaint) && !isRuined(board, hp);
 }
 
 /** True if tile t is a mixed tile (two pigments). */
@@ -139,6 +173,21 @@ export function toMix(board, hp = board.initHp) {
     rows.push(s);
   }
   return any ? rows : null;
+}
+
+/** `orig` rows for the board, or null if no tile is original paint. */
+export function toOrig(board, hp = board.initHp) {
+  if (board.nPaint === board.nTiles) return null;
+  const rows = [];
+  for (let y = 0; y < board.h; y++) {
+    let s = '';
+    for (let x = 0; x < board.w; x++) {
+      const t = board.tileAt[y * board.w + x];
+      s += t >= 0 && hp[t] > 0 && isOriginal(board, t) ? 'o' : '.';
+    }
+    rows.push(s);
+  }
+  return rows;
 }
 
 /** `under` rows for the board in the given state, or null if no tile has a different undercoat. */
@@ -242,10 +291,10 @@ export function tilesLeft(hp, n = hp.length) {
   return s;
 }
 
-/** Paint layers left. */
+/** Overpaint layers left (original paint is not counted: it stays). */
 export function layersLeft(board, hp) {
   let s = 0;
-  for (let i = 0; i < board.nTiles; i++) s += hp[i];
+  for (let i = 0; i < board.nPaint; i++) s += hp[i];
   return s;
 }
 

@@ -55,6 +55,15 @@
       }
     },
     {
+      "id": "orig",
+      "name": "Original Paint",
+      "note": "Some paint is the painting. Leave it.",
+      "ko": {
+        "name": "원본",
+        "note": "어떤 물감은 그림 그 자체다. 그대로 둔다."
+      }
+    },
+    {
       "id": "together",
       "name": "All Together",
       "note": "Everything so far, in small paintings.",
@@ -1393,6 +1402,93 @@
       ],
       "voice": {
         "winClean": "You waited for the coat."
+      }
+    },
+    {
+      "id": "p-orig1",
+      "chapter": "orig",
+      "name": "Not Yours to Lift",
+      "note": "The dull, cracked dab is the painting itself. Lift the overpaint around it, never the original.",
+      "rows": [
+        "A.A",
+        "..A",
+        "AAA"
+      ],
+      "orig": [
+        "...",
+        "..o",
+        "..."
+      ],
+      "ko": {
+        "name": "손대지 말 것",
+        "note": "칙칙하고 금이 간 물감은 그림 그 자체입니다. 둘레의 덧칠만 벗기고, 원본은 남기세요."
+      },
+      "par": 2,
+      "metrics": {
+        "pRandom": 0.1667,
+        "trapBits": 2.58,
+        "startMoves": 3,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 6
+      }
+    },
+    {
+      "id": "p-orig2",
+      "chapter": "orig",
+      "name": "Two of Three",
+      "note": "Three of a colour in one look. Take the overpaint, not the painting.",
+      "rows": [
+        "A..B",
+        ".AB.",
+        "..AB"
+      ],
+      "orig": [
+        "...o",
+        ".o..",
+        "...."
+      ],
+      "ko": {
+        "name": "셋 중 둘",
+        "note": "한눈에 같은 색이 셋. 덧칠만 가져가고 그림은 두세요."
+      },
+      "par": 2,
+      "metrics": {
+        "pRandom": 0.0667,
+        "trapBits": 3.91,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 9
+      }
+    },
+    {
+      "id": "p-orig3",
+      "chapter": "orig",
+      "name": "A Pair That Isn't",
+      "note": "Two of a colour, facing each other. Not every pair is yours.",
+      "rows": [
+        "BA..",
+        "..AA",
+        "BAAA"
+      ],
+      "orig": [
+        "o...",
+        "....",
+        "o..."
+      ],
+      "ko": {
+        "name": "짝이 아닌 짝",
+        "note": "같은 색 둘이 마주 보고 있어도, 모든 짝이 내 몫은 아닙니다."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.0417,
+        "trapBits": 4.58,
+        "startMoves": 4,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 17
       }
     },
     {

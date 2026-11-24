@@ -1,4 +1,4 @@
-import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft } from '../core/rules.js';
+import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, toOrig, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft, isOriginal, isRuined, isWon } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { isMuted, toggleMute, unlock, preload, setLost } from './mood.js';
@@ -91,7 +91,7 @@ const S = {
   levelInfo: null,          // analysis of the level start (par, metrics, solution)
   nowInfo: null,            // analysis of the current position (dev overlay / hints)
   mode: 'play', dev: false, busy: false, won: false, hints: 0, size: 56, hintCell: -1,
-  edit: { rows: null, under: null, mix: null, brush: 'A', varnish: false, underBrush: '', mixBrush: '', painting: false, info: null },
+  edit: { rows: null, under: null, mix: null, orig: null, brush: 'A', varnish: false, underBrush: '', mixBrush: '', origBrush: false, painting: false, info: null },
 };
 
 // ---------- procedural "original painting" revealed under the paint ----------
@@ -139,7 +139,7 @@ function painting(id, wPx, hPx) {
 // ---------- rendering ----------
 function boardShown() {
   if (S.mode === 'edit') {
-    const b = parseLevel({ rows: S.edit.rows.map(r => r.join('')), under: S.edit.under.map(r => r.join('')), mix: S.edit.mix.map(r => r.join('')) });
+    const b = parseLevel({ rows: S.edit.rows.map(r => r.join('')), under: S.edit.under.map(r => r.join('')), mix: S.edit.mix.map(r => r.join('')), orig: S.edit.orig.map(r => r.join('')) });
     return { b, hp: b.initHp, id: 'edit' };
   }
   return { b: S.board, hp: S.hp, id: S.def.id };
@@ -204,6 +204,8 @@ function renderBoard() {
     if (isTaped(b, hp, c)) { html += `<div class="cell taped" data-c="${c}"><div class="tape"></div></div>`; continue; }
     const t = b.tileAt[c];
     const dab = dabStyle(id, c);
+    // original paint: the painting itself, dull and crazed; once lifted, a raw loss in the canvas
+    if (t >= 0 && isOriginal(b, t)) { html += hp[t] > 0 ? `<div class="cell orig" data-c="${c}">${tileHtml(b.tileColor[t], false, b.tileColor[t], dab)}</div>` : `<div class="cell ruin" data-c="${c}"><div class="loss"></div></div>`; continue; }
     if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t], dab) : tileHtml(b.underColor[t], false, b.underColor[t], dab, b.mixColor[t])}</div>`;
     else html += `<div class="cell empty${c === S.hintCell ? ' hint' : ''}" data-c="${c}"></div>`;
   }
@@ -295,7 +297,12 @@ function updateHud() {
   st.className = '';
   st.textContent = '';
   if (S.won) return;
-  if (!isClear(S.hp, S.board.nTiles) && listMoves(S.board, S.hp).length === 0) { // tape never makes a strike
+  if (isRuined(S.board, S.hp)) { // an original was lifted: nothing more to do here but undo
+    st.textContent = t('ruined'); st.className = 'bad';
+    if (!S.lostAt) S.lostAt = S.hist.length;
+    turnRoom(); return;
+  }
+  if (!isClear(S.hp, S.board.nPaint) && listMoves(S.board, S.hp).length === 0) { // tape never makes a strike
     st.textContent = t('deadEnd');
     if (!S.lostAt) S.lostAt = S.hist.length; // (a board too big to analyse move by move)
     turnRoom(); // (the overpainter stays silent here; the room says it)
@@ -456,7 +463,7 @@ function placeTape(c, via = 'click') {
 }
 
 async function strikeAt(c) {
-  if (S.won) return;
+  if (S.won || isRuined(S.board, S.hp)) return;
   if (S.tapeMode && !S.busy) return placeTape(c);
   if (S.busy) { S.queued = c; return; } // fast players: run it right after the animation
   const r = probe(S.board, S.hp, c);
@@ -525,7 +532,7 @@ function calmRoom() {
 
 function afterMove() {
   if (S.lostAt && S.hist.length - S.lostAt >= TURN_MOVES) turnRoom();
-  if (isClear(S.hp, S.board.nTiles)) return win();
+  if (isWon(S.board, S.hp)) return win();
   updateHud();
   if (S.dev) refreshNow(); else S.nowInfo = null;
 }
@@ -662,15 +669,16 @@ async function replaySolution() {
 const BRUSHES = ['.', ...COLOR_CHARS.split(''), '#'];
 function enterEdit() {
   S.mode = 'edit';
-  if (!S.edit.rows) setEditRows(S.def ? toRows(S.board, S.board.initHp) : ['......', '......', '......', '......', '......', '......'], S.def, S.def ? toUnder(S.board, S.board.initHp) : null, S.def ? toMix(S.board, S.board.initHp) : null);
+  if (!S.edit.rows) setEditRows(S.def ? toRows(S.board, S.board.initHp) : ['......', '......', '......', '......', '......', '......'], S.def, S.def ? toUnder(S.board, S.board.initHp) : null, S.def ? toMix(S.board, S.board.initHp) : null, S.def ? toOrig(S.board, S.board.initHp) : null);
   showMode();
   renderBoard(); renderList(); renderPalette();
 }
-function setEditRows(rows, def, under = null, mix = null) {
+function setEditRows(rows, def, under = null, mix = null, orig = null) {
   const w = Math.max(...rows.map(r => r.length));
   S.edit.rows = rows.map(r => r.padEnd(w, '.').split(''));
   S.edit.under = rows.map((_, y) => (under?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
   S.edit.mix = rows.map((_, y) => (mix?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
+  S.edit.orig = rows.map((_, y) => (orig?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
   S.edit.info = null;
   $('editW').value = w; $('editH').value = rows.length;
   if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; $('editTape').value = def.tape ?? 0; }
@@ -681,7 +689,8 @@ function renderPalette() {
     const k = COLOR_CHARS.indexOf(ch);
     const u = S.edit.varnish && S.edit.underBrush ? COLOR_CHARS.indexOf(S.edit.underBrush) : k;
     const mk = !S.edit.varnish && S.edit.mixBrush && S.edit.mixBrush !== ch ? COLOR_CHARS.indexOf(S.edit.mixBrush) : -1;
-    const inner = ch === '#' ? '<div class="oldtape"></div>' : k >= 0 ? tileHtml(k, S.edit.varnish, u, '', mk) : '';
+    const orig = S.edit.origBrush && !S.edit.varnish && mk < 0 && k >= 0;
+    const inner = ch === '#' ? '<div class="oldtape"></div>' : k >= 0 ? (orig ? '<div class="orig">' : '') + tileHtml(k, S.edit.varnish, u, '', mk) + (orig ? '</div>' : '') : '';
     const lbl = ch === '.' ? 'erase' : ch === '#' ? 'tape' : PIGMENTS[k].slice(0, 5);
     return `<button class="brush${S.edit.brush === ch ? ' active' : ''}" data-b="${ch}" title="${lbl}">${inner}<span class="lbl">${lbl}</span></button>`;
   }).join('');
@@ -695,10 +704,13 @@ function paintCell(c) {
   const u = S.edit.varnish && isPaint && S.edit.underBrush && S.edit.underBrush !== S.edit.brush ? S.edit.underBrush : '.';
   // mixing only on single-layer tiles
   const m = !S.edit.varnish && isPaint && S.edit.mixBrush && S.edit.mixBrush !== S.edit.brush ? S.edit.mixBrush : '.';
-  if (S.edit.rows[y][x] === ch && S.edit.under[y][x] === u && S.edit.mix[y][x] === m) return;
+  // original paint: single-layer, unmixed tiles only
+  const o = S.edit.origBrush && isPaint && !S.edit.varnish && m === '.' ? 'o' : '.';
+  if (S.edit.rows[y][x] === ch && S.edit.under[y][x] === u && S.edit.mix[y][x] === m && S.edit.orig[y][x] === o) return;
   S.edit.rows[y][x] = ch;
   S.edit.under[y][x] = u;
   S.edit.mix[y][x] = m;
+  S.edit.orig[y][x] = o;
   S.edit.info = null;
   renderBoard();
 }
@@ -709,6 +721,7 @@ function editDef() {
   };
   if (S.edit.under.some(r => r.some(ch => ch !== '.'))) def.under = S.edit.under.map(r => r.join(''));
   if (S.edit.mix.some(r => r.some(ch => ch !== '.'))) def.mix = S.edit.mix.map(r => r.join(''));
+  if (S.edit.orig.some(r => r.some(ch => ch !== '.'))) def.orig = S.edit.orig.map(r => r.join(''));
   const tape = Math.max(0, Math.min(5, +$('editTape').value | 0));
   if (tape) def.tape = tape;
   return def;
@@ -908,7 +921,7 @@ function wire() {
     if (!btn) return;
     const def = allLevels().find(d => d.id === btn.dataset.id);
     if (!def) return;
-    if (S.mode === 'edit') { setEditRows(def.rows, def, def.under, def.mix); renderBoard(); }
+    if (S.mode === 'edit') { setEditRows(def.rows, def, def.under, def.mix, def.orig); renderBoard(); }
     else if (!isLocked(def)) loadLevel(def);
   });
 
@@ -930,16 +943,18 @@ function wire() {
   $('varnishBrush').onchange = e => { S.edit.varnish = e.target.checked; renderPalette(); };
   $('underBrush').onchange = e => { S.edit.underBrush = e.target.value; renderPalette(); };
   $('mixBrush').onchange = e => { S.edit.mixBrush = e.target.value; renderPalette(); };
+  $('origBrush').onchange = e => { S.edit.origBrush = e.target.checked; renderPalette(); };
   $('resize').onclick = () => {
     const w = Math.max(2, Math.min(12, +$('editW').value)), h = Math.max(2, Math.min(12, +$('editH').value));
     const old = S.edit.rows;
-    const oldU = S.edit.under, oldM = S.edit.mix;
+    const oldU = S.edit.under, oldM = S.edit.mix, oldO = S.edit.orig;
     S.edit.rows = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => old[y]?.[x] ?? '.'));
     S.edit.under = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => oldU[y]?.[x] ?? '.'));
     S.edit.mix = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => oldM[y]?.[x] ?? '.'));
+    S.edit.orig = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => oldO[y]?.[x] ?? '.'));
     S.edit.info = null; renderBoard();
   };
-  $('clearEdit').onclick = () => { S.edit.rows = S.edit.rows.map(r => r.map(() => '.')); S.edit.under = S.edit.under.map(r => r.map(() => '.')); S.edit.mix = S.edit.mix.map(r => r.map(() => '.')); S.edit.info = null; renderBoard(); };
+  $('clearEdit').onclick = () => { S.edit.rows = S.edit.rows.map(r => r.map(() => '.')); S.edit.under = S.edit.under.map(r => r.map(() => '.')); S.edit.mix = S.edit.mix.map(r => r.map(() => '.')); S.edit.orig = S.edit.orig.map(r => r.map(() => '.')); S.edit.info = null; renderBoard(); };
   $('analyze').onclick = runEditAnalysis;
   $('testPlay').onclick = () => loadLevel(editDef());
   $('saveLevel').onclick = async () => {
@@ -955,6 +970,7 @@ function wire() {
     const out = { id: def.name.toLowerCase().replace(/\W+/g, '-'), name: def.name, note: def.note, rows: def.rows };
     if (def.under) out.under = def.under;
     if (def.mix) out.mix = def.mix;
+    if (def.orig) out.orig = def.orig;
     if (def.tape) out.tape = def.tape;
     if (a && a !== 'big' && a.solvable) out.par = a.minStrikes;
     $('json').value = JSON.stringify(out, null, 2);
@@ -964,7 +980,7 @@ function wire() {
       let d = JSON.parse($('json').value);
       if (d.levels) d = d.levels[0];
       parseLevel(d);
-      setEditRows(d.rows, d, d.under, d.mix); renderBoard();
+      setEditRows(d.rows, d, d.under, d.mix, d.orig); renderBoard();
     } catch (err) { $('editStats').innerHTML = `<dt style="grid-column:1/-1;color:var(--bad)">${escapeHtml(err.message)}</dt>`; }
   };
 

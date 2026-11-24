@@ -1,7 +1,7 @@
 // Rules + solver checks.   node tools/test.mjs
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, canTape, applyTape, tapeLeft, isTaped } from '../core/rules.js';
+import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, toOrig, canTape, applyTape, tapeLeft, isTaped, isRuined, isWon, isOriginal } from '../core/rules.js';
 import { analyze } from '../core/solver.js';
 import { matchTrap, checkTraps } from '../core/traps.js';
 
@@ -124,7 +124,8 @@ function slowSolve(b) {
     const k = hp.join('');
     if (memo.has(k)) return memo.get(k);
     let r;
-    if (isClear(hp, b.nTiles)) r = { f: 0, p: 1 };
+    if (isRuined(b, hp)) r = { f: Infinity, p: 0 };
+    else if (isClear(hp, b.nPaint)) r = { f: 0, p: 1 };
     else {
       const ms = listMoves(b, hp).map(m => ({ next: applyHits(hp, m.hits) }));
       for (let c = 0; c < b.w * b.h; c++) if (canTape(b, hp, c)) ms.push({ next: applyTape(b, hp, c) });
@@ -228,6 +229,29 @@ test('trap matching: lifts is a subset, tape cell or any, after N moves', () => 
   assert.equal(matchTrap(def, b, { hits: [1, 2] }, 0), null);
   assert.equal(matchTrap(def, b, { tape: true, cell: 6 }).voice.stuck, 'here');
   assert.equal(matchTrap(def, b, { tape: true, cell: 7 }).voice.stuck, 'tape');
+});
+
+test('original paint: seen and pairs, but lifting it loses; the level ends without it', () => {
+  // row: A . A . A(original). Striking (1,0) lifts the two overpaint reds; (3,0) also lifts the original.
+  const b = parseLevel({ rows: ['A.A.A'], orig: ['....o'] });
+  assert.equal(b.nPaint, 2); assert.equal(b.nTiles, 3);
+  const o = b.tileAt[4];
+  assert.ok(isOriginal(b, o) && !isOriginal(b, b.tileAt[0]));
+  assert.deepEqual(toOrig(b), ['....o']);
+  const ruin = probe(b, b.initHp, 3);
+  assert.ok(ruin.hits.includes(o), 'an original is seen and pairs');
+  assert.ok(isRuined(b, applyHits(b.initHp, ruin.hits)));
+  const good = applyHits(b.initHp, probe(b, b.initHp, 1).hits);
+  assert.ok(isWon(b, good) && !isClear(good), 'won with the original still on the canvas');
+  const a = analyze(b);
+  assert.ok(a.solvable && a.minStrikes === 1 && a.startMoves === 2 && a.startSafe === 1);
+  assert.equal(a.pRandom, 0.5);
+  const slow = slowSolve(b);
+  assert.equal(slow.f, 1); assert.equal(slow.p, 0.5);
+  // an original on an empty cell, a double coat or a mixed tile is refused
+  assert.throws(() => parseLevel({ rows: ['A.'], orig: ['.o'] }));
+  assert.throws(() => parseLevel({ rows: ['a.'], orig: ['o.'] }));
+  assert.throws(() => parseLevel({ rows: ['A.'], mix: ['B.'], orig: ['o.'] }));
 });
 
 console.log(`\n${n} tests passed`);

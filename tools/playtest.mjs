@@ -110,7 +110,7 @@ for (const file of files) {
           if (after === before - 1) { L.optimalStrikes++; verdict = 'optimal'; }
           if (after === Infinity) { L.blunders++; verdict = 'BLUNDER'; cur.lostAt = { t: cur.active, strikes: 0 }; }
         } else if (before === Infinity) { verdict = 'lost'; if (cur.lostAt) cur.lostAt.strikes++; }
-        const dead = after === Infinity && r && !isClear(next, B.board.nTiles) && !anyMove(B.board, next);
+        const dead = after === Infinity && r && !isClear(next, B.board.nPaint) && !anyMove(B.board, next);
         if (dead) L.deadEnds++;
         tl('strike', { cell: e.cell, cleared: r.hits.length, think: +(think / 1000).toFixed(1), left: after === Infinity ? 'LOST' : after, verdict, ...(dead ? { deadEnd: true } : {}) });
         break;

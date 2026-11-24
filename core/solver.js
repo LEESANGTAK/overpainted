@@ -10,7 +10,7 @@
 //   deadStates        reachable positions with paint left and no effective strike
 //   unsolvableRatio   share of reachable positions from which clearing is impossible
 
-import { isClear } from './rules.js';
+import { isClear, isRuined } from './rules.js';
 
 export class SearchLimit extends Error {
   constructor(states) { super(`State limit reached (${states})`); this.states = states; }
@@ -114,7 +114,9 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}
     if (hit) return hit;
     if (memo.size >= maxStates) throw new SearchLimit(memo.size);
     let r;
-    if (isClear(state, board.nTiles)) {
+    if (isRuined(board, state)) { // an original was lifted: lost, whatever is left
+      r = { f: Infinity, p: 0, ways: 0, nMoves: 0, safe: 0 };
+    } else if (isClear(state, board.nPaint)) {
       r = { f: 0, p: 1, ways: 1, nMoves: 0, safe: 0 };
     } else {
       const moves = movesFast(board, rays, state);
@@ -146,7 +148,7 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000 } = {}
   const solution = [];
   if (root.f < Infinity) {
     let state = hp;
-    while (!isClear(state, board.nTiles)) {
+    while (!isClear(state, board.nPaint)) {
       const want = memo.get(keyOf(state)).f - 1;
       let chosen = null;
       for (const m of movesFast(board, rays, state)) {
@@ -182,7 +184,8 @@ export function findSolution(board, { hp = board.initHp, maxStates = 2_000_000 }
   const rays = buildRays(board);
   const deadSet = new Set();
   function dfs(state, path) {
-    if (isClear(state, board.nTiles)) return true;
+    if (isRuined(board, state)) return false;
+    if (isClear(state, board.nPaint)) return true;
     const key = keyOf(state);
     if (deadSet.has(key)) return false;
     if (deadSet.size >= maxStates) throw new SearchLimit(deadSet.size);
