@@ -2,6 +2,7 @@ import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMi
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { isMuted, toggleMute, unlock, preload, setLost } from './mood.js';
+import { startPad } from './pad.js';
 import { t, lt, applyStatic, toggleLang } from './i18n.js';
 import { COLLECTOR_URL } from './config.js';
 let predictWeights = DEFAULT_WEIGHTS; // replaced by levels/predict-weights.json when present
@@ -202,6 +203,7 @@ function renderBoard() {
   const svg = $('rays');
   svg.setAttribute('width', b.w * s); svg.setAttribute('height', b.h * s);
   svg.innerHTML = '';
+  renderCursor();
 }
 
 const cellEl = c => $('board').querySelector(`[data-c="${c}"]`);
@@ -349,6 +351,7 @@ function loadLevel(def) {
   S.hist = []; S.won = false; S.hints = 0; S.hintCell = -1; S.busy = false; S.queued = null; S.tapeMode = false;
   S.gen = (S.gen ?? 0) + 1; // a strike still animating from the previous level checks this and drops out
   S.lostAt = 0; // moves made when this attempt became unwinnable (0 = still winnable)
+  S.cursor = Math.floor(S.board.h / 2) * S.board.w + Math.floor(S.board.w / 2); // gamepad cursor starts mid-canvas
   calmRoom();
   S.levelInfo = safeAnalyze(S.board, S.board.initHp, 800_000);
   if (S.def.par == null && S.levelInfo && S.levelInfo !== 'big') S.def.par = S.levelInfo.minStrikes;
@@ -552,6 +555,7 @@ function win() {
   if ($('ovExtra')) $('ovExtra').onclick = () => loadLevel(extra);
   if ($('ovEdit')) $('ovEdit').onclick = enterEdit;
   updateHud(); renderList();
+  if (S.padActive) { clearRays(); padMove(0, 0); renderCursor(); } // the pad lands on the card's main button
 }
 
 // First visit of a tester: what to do, what is recorded, and who is playing (name asked here,
@@ -628,7 +632,7 @@ function hint() {
   S.hints++;
   S.hintCell = first.cell;
   cellEl(first.cell)?.classList.add('hint');
-  if (first.tape) { $('status').textContent = t('hintTape'); $('status').className = ''; }
+  if (first.tape) { $('status').textContent = t(S.padActive ? 'hintTapePad' : 'hintTape'); $('status').className = ''; }
 }
 
 async function replaySolution() {
@@ -763,6 +767,92 @@ function showChapter() {
 
 function allLevels() { return [...S.levels, ...store.custom]; }
 
+// ---- Gamepad (Steam Deck and other pads; see pad.js) ----
+// A frame over one cell is the cursor. A strikes (or tapes, when tape is armed) the cell under it;
+// on the result card the D-pad picks a button and A presses it. Mouse or touch hides the cursor.
+const padKeys = () => document.querySelector('header .keys');
+function setPadActive(on) {
+  if (S.padActive === on) return;
+  S.padActive = on;
+  const k = padKeys();
+  if (!S.keysI18n) S.keysI18n = k.dataset.i18n;
+  k.dataset.i18n = on ? 'keysPad' : S.keysI18n;
+  k.textContent = t(k.dataset.i18n);
+  if (!on) { clearRays(); $('overlay').querySelectorAll('.pad-focus').forEach(b => b.classList.remove('pad-focus')); }
+  renderCursor();
+}
+function renderCursor() {
+  const el = $('padCursor');
+  const show = S.padActive && S.mode === 'play' && S.board && S.cursor >= 0 && $('overlay').hidden;
+  el.hidden = !show;
+  if (!show) return;
+  const s = S.size, w = S.board.w;
+  el.style.width = el.style.height = s + 'px';
+  el.style.transform = `translate(${(S.cursor % w) * s}px, ${Math.floor(S.cursor / w) * s}px)`;
+  el.classList.toggle('taping', !!S.tapeMode);
+}
+function padHover() { // the lines of sight from the cursor, as a mouse hover would show them
+  if (S.busy || S.won || !$('hoverRays').checked) return clearRays();
+  const r = probe(S.board, S.hp, S.cursor);
+  if (r) drawRays(S.cursor, r.rays, r.hits, 'hover'); else clearRays();
+}
+const overlayButtons = () => [...$('overlay').querySelectorAll('button')];
+function padMove(dx, dy) {
+  const wasActive = S.padActive;
+  setPadActive(true);
+  if (S.mode !== 'play' || !S.board) return;
+  if (!$('overlay').hidden) { // result card: move between its buttons
+    const bs = overlayButtons(); if (!bs.length) return;
+    let i = bs.findIndex(b => b.classList.contains('pad-focus'));
+    if (i < 0) i = Math.max(0, bs.findIndex(b => b.classList.contains('primary')));
+    else if (wasActive) i = (i + (dx || dy) + bs.length) % bs.length;
+    bs.forEach((b, j) => b.classList.toggle('pad-focus', j === i));
+    return;
+  }
+  if (wasActive) { // the first touch of the pad only shows the cursor where it was
+    const w = S.board.w, h = S.board.h;
+    const x = Math.min(w - 1, Math.max(0, S.cursor % w + dx)), y = Math.min(h - 1, Math.max(0, Math.floor(S.cursor / w) + dy));
+    S.cursor = y * w + x;
+  }
+  renderCursor(); padHover();
+}
+function stepLevel(dir) { // LB / RB: the previous or next painting that is open, in list order
+  const order = [...S.chapters.flatMap(ch => S.levels.filter(d => d.chapter === ch.id)), ...S.levels.filter(d => !chapterOf(d)), ...store.custom];
+  let i = order.indexOf(S.def);
+  for (let n = 0; n < order.length; n++) {
+    i = (i + dir + order.length) % order.length;
+    if (!isLocked(order[i])) return loadLevel(order[i]);
+  }
+}
+function padPress(name) {
+  setPadActive(true);
+  // a pad press does not count as a gesture for browser audio; once the page has had one, it can
+  if (navigator.userActivation?.hasBeenActive && !isMuted()) unlock();
+  if (!S.padTold && navigator.userActivation && !navigator.userActivation.hasBeenActive) {
+    S.padTold = true; $('status').textContent = t('padTapForSound'); $('status').className = '';
+  }
+  const welcomeForm = document.querySelector('#welcome form');
+  if (welcomeForm) { if (name === 'a') welcomeForm.requestSubmit(); return; }
+  if (S.mode !== 'play' || !S.board) return;
+  if (!$('overlay').hidden) {
+    const bs = overlayButtons();
+    const b = bs.find(x => x.classList.contains('pad-focus')) ?? bs.find(x => x.classList.contains('primary')) ?? bs[0];
+    if (name === 'a') b?.click();
+    else if (name === 'b') undo();
+    else if (name === 'view') restart();
+    else if (name === 'lb' || name === 'rb') stepLevel(name === 'rb' ? 1 : -1);
+    else if (name === 'menu') onMute();
+    return;
+  }
+  if (name === 'a') { clearRays(); strikeAt(S.cursor); }
+  else if (name === 'b') { if (S.tapeMode) toggleTape(); else undo(); }
+  else if (name === 'x') toggleTape();
+  else if (name === 'y') { hint(); if (S.hintCell >= 0) S.cursor = S.hintCell; renderCursor(); }
+  else if (name === 'view') restart();
+  else if (name === 'menu') onMute();
+  else if (name === 'lb' || name === 'rb') stepLevel(name === 'rb' ? 1 : -1);
+}
+
 function wire() {
   const board = $('board');
   board.addEventListener('mousedown', e => {
@@ -798,6 +888,9 @@ function wire() {
     e.preventDefault();
   }, { passive: false });
   board.addEventListener('mouseleave', () => { if (!S.busy) clearRays(); });
+  window.addEventListener('pointermove', e => { if (S.padActive && e.pointerType === 'mouse' && (e.movementX || e.movementY)) setPadActive(false); });
+  window.addEventListener('pointerdown', () => { if (S.padActive) setPadActive(false); });
+  startPad({ move: padMove, press: padPress, connect: p => log('pad', { id: p.id, mapping: p.mapping }) });
   window.addEventListener('mouseup', () => { S.edit.painting = false; });
   window.addEventListener('touchend', () => { S.edit.painting = false; });
   window.addEventListener('touchcancel', () => { S.edit.painting = false; });
