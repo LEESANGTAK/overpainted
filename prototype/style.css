@@ -217,7 +217,6 @@ aside { overflow-y: auto; padding: 14px; background: var(--panel); }
 #tapeTray .piece.used { outline: 1px dashed #fbf3dc40; outline-offset: -3px; cursor: default; }
 #tapeTray .piece.used::before, #tapeTray .piece.used::after { content: none; }
 #tapeTray .piece.lifted { opacity: .25; }
-#tapeTray.armed .piece:not(.used) { outline: 2px solid var(--accent); outline-offset: 3px; }
 #tapeTray.off .piece { cursor: default; }
 .tape-ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%, -50%); opacity: .75; filter: drop-shadow(0 8px 10px #000a); }
 .tape-ghost.ok { opacity: 1; }
@@ -376,3 +375,58 @@ dd.bad { color: var(--bad); } dd.good { color: var(--good); }
   background: radial-gradient(circle at 40% 40%, #e9dcc0, #b9a47e 70%);
   box-shadow: inset 0 0 6px #5a4126, 0 0 0 2px #7a1d14aa;
 }
+
+/* Tools in the tray besides tape: a retouch dab (its pigment, a small fresh blob) and the knife
+   (a mixed dab cut in two). Armed = the one in hand. */
+#tapeTray .piece.armed { outline: 2px solid var(--accent); outline-offset: 3px; }
+#tapeTray .piece.dab::before, #tapeTray .piece.dab::after,
+#tapeTray .piece.knife::before, #tapeTray .piece.knife::after, .tape-ghost.dab-ghost::before, .tape-ghost.dab-ghost::after { content: none; }
+#tapeTray .piece.dab, .tape-ghost.dab-ghost {
+  border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%;
+  background: radial-gradient(circle at 35% 30%, #ffffff66, transparent 45%), var(--c);
+  box-shadow: inset 0 -3px 5px #0005, 0 2px 4px #0008;
+}
+.tape-ghost.dab-ghost { width: auto; }
+#tapeTray .piece.dab.used { background: none; box-shadow: none; }
+#tapeTray .piece.knife {
+  background:
+    linear-gradient(135deg, var(--p0) 0 46%, transparent 46% 54%, var(--p1) 54%);
+  border-radius: 40%; box-shadow: 0 2px 4px #0008;
+}
+#tapeTray .piece.knife.used { background: none; box-shadow: none; }
+/* split: tiles that can be split glow; the chosen one and its free neighbours are marked */
+#board .cell.can-split .tile { outline: 2px dashed #fbf3dccc; outline-offset: 2px; }
+#board .cell.split-from .tile { outline: 2px solid var(--accent); outline-offset: 2px; }
+#board .cell.split-to::after {
+  content: ''; position: absolute; inset: 20%; border: 2px dashed #fbf3dcaa; border-radius: 50%;
+}
+#splitPick {
+  position: absolute; left: var(--board-pad); top: var(--board-pad); z-index: 3;
+  display: flex; align-items: stretch; gap: 3px; padding: 5%; box-sizing: border-box;
+}
+#splitPick[hidden] { display: none; }
+#splitPick .half {
+  flex: 1; min-width: 0; border: 0; padding: 0; cursor: pointer; background: var(--c);
+  border-radius: 50% 10% 10% 50%; box-shadow: inset 0 -3px 5px #0005, 0 2px 4px #000a;
+}
+#splitPick .half + .half { border-radius: 10% 50% 50% 10%; }
+#splitPick .half.sel { outline: 2px solid #f4e9c8; outline-offset: 2px; }
+/* the pad's tool wheel: up to four tools around the cursor, one per direction */
+#toolWheel { position: absolute; left: var(--board-pad); top: var(--board-pad); z-index: 3; pointer-events: none; }
+#toolWheel[hidden] { display: none; }
+#toolWheel .slot {
+  position: absolute; width: 46px; height: 46px; left: 50%; top: 50%; margin: -23px 0 0 -23px;
+  display: grid; place-items: center; background: #17120ce6; border: 1px solid #5c4628; border-radius: 50%;
+}
+#toolWheel .slot .piece { position: relative; width: 28px; height: 28px; }
+#toolWheel .slot.sel { border: 2px solid #f4e9c8; }
+#toolWheel .d0 { transform: translateY(-58px); } #toolWheel .d1 { transform: translateX(58px); }
+#toolWheel .d2 { transform: translateY(58px); } #toolWheel .d3 { transform: translateX(-58px); }
+#toolWheel .slot .piece:not(.dab):not(.knife) { --tape-paper: linear-gradient(#fbf3dc, #ece0b8); }
+#toolWheel .slot .piece:not(.dab):not(.knife)::before, #toolWheel .slot .piece:not(.dab):not(.knife)::after {
+  content: ''; position: absolute; left: -8%; right: -8%; top: 36%; bottom: 36%; background: var(--tape-paper);
+}
+#toolWheel .slot .piece:not(.dab):not(.knife)::before { transform: rotate(45deg); }
+#toolWheel .slot .piece:not(.dab):not(.knife)::after { transform: rotate(-45deg); }
+#toolWheel .slot .piece.dab { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffffff66, transparent 45%), var(--c); }
+#toolWheel .slot .piece.knife { background: linear-gradient(135deg, var(--p0) 0 46%, transparent 46% 54%, var(--p1) 54%); border-radius: 40%; }

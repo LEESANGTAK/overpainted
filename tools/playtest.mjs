@@ -8,7 +8,7 @@
 // *blunders* (the strike that made the level unwinnable) and how long the player took to notice.
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { parseLevel, probe, applyHits, applyTape, canTape, isClear } from '../core/rules.js';
+import { parseLevel, probe, applyHits, applyTape, canTape, isClear, applyRetouch, canRetouch, applySplit, canSplit, COLOR_CHARS } from '../core/rules.js';
 import { analyze, SearchLimit } from '../core/solver.js';
 
 const root = resolve(import.meta.dirname, '..');
@@ -115,15 +115,19 @@ for (const file of files) {
         tl('strike', { cell: e.cell, cleared: r.hits.length, think: +(think / 1000).toFixed(1), left: after === Infinity ? 'LOST' : after, verdict, ...(dead ? { deadEnd: true } : {}) });
         break;
       }
-      case 'tape': { // masking tape: a move like a strike (judged the same way), never a dead end by itself
+      case 'tape': case 'retouch': case 'split': { // tool moves: moves like a strike (judged the same way), never a dead end by themselves
         if (e.replay) { L.replayUsed = true; break; }
         const think = cur.sinceMove; cur.sinceMove = 0;
         L.thinkMs.push(think);
         if (cur.firstMove) { L.firstThinkMs.push(think); cur.firstMove = false; }
         L.strikes++;
-        if (!canTape(B.board, cur.hp, e.cell)) { tl('tape?', { cell: e.cell }); break; }
+        const bd = B.board, k = COLOR_CHARS.indexOf(e.color ?? '');
+        const di = e.type === 'retouch' ? bd.retouch.findIndex((kk, i) => kk === k && canRetouch(bd, cur.hp, i, e.cell)) : -1;
+        const st = e.type === 'split' ? bd.tileAt[e.from] : -1;
+        const ok = e.type === 'tape' ? canTape(bd, cur.hp, e.cell) : e.type === 'retouch' ? di >= 0 : canSplit(bd, cur.hp, st, e.cell, k);
+        if (!ok) { tl(e.type + '?', { cell: e.cell }); break; }
         const before = remaining(B, cur.hp);
-        const next = applyTape(B.board, cur.hp, e.cell);
+        const next = e.type === 'tape' ? applyTape(bd, cur.hp, e.cell) : e.type === 'retouch' ? applyRetouch(bd, cur.hp, di, e.cell) : applySplit(bd, cur.hp, st, e.cell, k);
         const after = remaining(B, next);
         cur.hist.push(cur.hp); cur.hp = next;
         let verdict = 'ok';
@@ -132,7 +136,7 @@ for (const file of files) {
           if (after === before - 1) { L.optimalStrikes++; verdict = 'optimal'; }
           if (after === Infinity) { L.blunders++; verdict = 'BLUNDER'; cur.lostAt = { t: cur.active, strikes: 0 }; }
         } else if (before === Infinity) { verdict = 'lost'; if (cur.lostAt) cur.lostAt.strikes++; }
-        tl('tape', { cell: e.cell, think: +(think / 1000).toFixed(1), left: after === Infinity ? 'LOST' : after, verdict });
+        tl(e.type, { cell: e.cell, ...(e.color ? { color: e.color } : {}), think: +(think / 1000).toFixed(1), left: after === Infinity ? 'LOST' : after, verdict });
         break;
       }
       case 'undo':

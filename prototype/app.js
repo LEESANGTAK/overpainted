@@ -1,4 +1,4 @@
-import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, toOrig, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft, isOriginal, isRuined, isWon } from '../core/rules.js';
+import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, toOrig, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft, isOriginal, isRuined, isWon, cellOf, retouchLeft, canRetouch, applyRetouch, splitLeft, canSplitTile, canSplit, applySplit, listToolMoves } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { isMuted, toggleMute, unlock, preload, setLost } from './mood.js';
@@ -193,7 +193,7 @@ function renderBoard() {
   const s = S.size = fitSize(b.w, b.h);
   const el = $('board');
   el.classList.toggle('edit', S.mode === 'edit');
-  el.classList.toggle('taping', S.mode === 'play' && !!S.tapeMode);
+  el.classList.toggle('taping', S.mode === 'play' && (S.tool?.kind === 'tape' || S.tool?.kind === 'retouch'));
   el.style.setProperty('--s', s + 'px');
   el.style.gridTemplateColumns = `repeat(${b.w}, ${s}px)`;
   el.style.gridAutoRows = s + 'px';
@@ -202,8 +202,10 @@ function renderBoard() {
   for (let c = 0; c < b.w * b.h; c++) {
     if (b.blocked[c]) { html += `<div class="cell" data-c="${c}"><div class="oldtape"></div></div>`; continue; }
     if (isTaped(b, hp, c)) { html += `<div class="cell taped" data-c="${c}"><div class="tape"></div></div>`; continue; }
-    const t = b.tileAt[c];
     const dab = dabStyle(id, c);
+    // an added tile (a retouch dab or a split half) sits on top of whatever the cell had
+    if (b.tools && hp[b.offAdd + c]) { const k = hp[b.offCol + c]; html += `<div class="cell added" data-c="${c}">${tileHtml(k, false, k, dab)}</div>`; continue; }
+    const t = b.tileAt[c];
     // original paint: the painting itself, dull and crazed; once lifted, a raw loss in the canvas
     if (t >= 0 && isOriginal(b, t)) { html += hp[t] > 0 ? `<div class="cell orig" data-c="${c}">${tileHtml(b.tileColor[t], false, b.tileColor[t], dab)}</div>` : `<div class="cell ruin" data-c="${c}"><div class="loss"></div></div>`; continue; }
     if (t >= 0 && hp[t] > 0) html += `<div class="cell" data-c="${c}">${hp[t] >= 2 ? tileHtml(b.tileColor[t], true, b.underColor[t], dab) : tileHtml(b.underColor[t], false, b.underColor[t], dab, b.mixColor[t])}</div>`;
@@ -213,6 +215,7 @@ function renderBoard() {
   const svg = $('rays');
   svg.setAttribute('width', b.w * s); svg.setAttribute('height', b.h * s);
   svg.innerHTML = '';
+  renderToolMarks();
   renderCursor();
 }
 
@@ -287,9 +290,9 @@ function renderList() {
 function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 function updateHud() {
-  const strikes = S.hist.length; // tape counts as a move too
+  const strikes = S.hist.length; // tape, dabs and splits count as moves too
   $('strikes').textContent = strikes;
-  $('strikesLabel').textContent = t(S.board.tape ? 'moves' : 'strikes');
+  $('strikesLabel').textContent = t(S.board.tape || S.board.tools ? 'moves' : 'strikes');
   renderTray();
   $('par').textContent = S.def.par ?? S.levelInfo?.minStrikes ?? '–';
   $('left').textContent = layersLeft(S.board, S.hp);
@@ -302,7 +305,9 @@ function updateHud() {
     if (!S.lostAt) S.lostAt = S.hist.length;
     turnRoom(); return;
   }
-  if (!isClear(S.hp, S.board.nPaint) && listMoves(S.board, S.hp).length === 0) { // tape never makes a strike
+  // a dead end: paint left, no strike, and no dab or split that could make one (tape never does)
+  const canMake = S.board.tools && listToolMoves(S.board, S.hp).some(m => !m.tape);
+  if (!isClear(S.hp, S.board.nPaint) && listMoves(S.board, S.hp).length === 0 && !canMake) { // tape never makes a strike
     st.textContent = t('deadEnd');
     if (!S.lostAt) S.lostAt = S.hist.length; // (a board too big to analyse move by move)
     turnRoom(); // (the overpainter stays silent here; the room says it)
@@ -363,7 +368,7 @@ function loadLevel(def) {
   S.def = def;
   S.board = parseLevel(def);
   S.hp = S.board.initHp.slice();
-  S.hist = []; S.won = false; S.hints = 0; S.hintCell = -1; S.busy = false; S.queued = null; S.tapeMode = false;
+  S.hist = []; S.won = false; S.hints = 0; S.hintCell = -1; S.busy = false; S.queued = null; S.tool = null;
   S.gen = (S.gen ?? 0) + 1; // a strike still animating from the previous level checks this and drops out
   S.lostAt = 0; // moves made when this attempt became unwinnable (0 = still winnable)
   S.cursor = Math.floor(S.board.h / 2) * S.board.w + Math.floor(S.board.w / 2); // gamepad cursor starts mid-canvas
@@ -378,27 +383,56 @@ function loadLevel(def) {
   $('overlay').hidden = true;
   showMode();
   renderBoard(); renderList(); updateHud(); renderDev();
-  log('level_start', { chapter: def.chapter ?? null, rows: def.rows, under: def.under, mix: def.mix, tape: def.tape || undefined, par: def.par ?? null, dev: S.dev });
+  log('level_start', { chapter: def.chapter ?? null, rows: def.rows, under: def.under, mix: def.mix, orig: def.orig, tape: def.tape || undefined, retouch: def.retouch || undefined, split: def.split || undefined, par: def.par ?? null, dev: S.dev });
   try { localStorage.setItem(STORE_KEY + '.last', def.id); } catch { }
 }
 
-// Masking tape lives in a tray left of the canvas: one piece per tape. Drag a piece onto an empty
-// cell to tape it. A plain click on a piece (or T) arms tape instead; the next click on a cell tapes it.
+// Tools live in a tray left of the canvas: masking tape (one X per piece), retouch dabs (one per
+// pigment the level gives) and the splitting knife (one per split). Drag tape or a dab onto an
+// empty cell; or click a piece to pick it up (T for tape), then click where it goes.
+// Splitting takes three clicks: the mixed tile, the empty neighbour, the pigment that moves there.
+// S.tool = null | {kind:'tape'} | {kind:'retouch', i} | {kind:'split', stage:'pick'|'where'|'color', t, cell, k}
+function toolsOf() { // tools the player can pick up now (one entry per kind; dabs per pigment)
+  const b = S.board, hp = S.hp, out = [];
+  if (!b || S.mode !== 'play' || S.won) return out;
+  if (b.tape && tapeLeft(b, hp) > 0) out.push({ kind: 'tape' });
+  const seen = new Set();
+  for (const i of retouchLeft(b, hp)) if (!seen.has(b.retouch[i])) { seen.add(b.retouch[i]); out.push({ kind: 'retouch', i }); }
+  if (splitLeft(b, hp) > 0) out.push({ kind: 'split' });
+  return out;
+}
+const sameTool = (a, b) => !!a && !!b && a.kind === b.kind && (a.kind !== 'retouch' || S.board.retouch[a.i] === S.board.retouch[b.i]);
+const toolIcon = tool => tool.kind === 'tape' ? '<div class="piece"></div>'
+  : tool.kind === 'retouch' ? `<div class="piece dab" style="--c:var(--p${S.board.retouch[tool.i]})"></div>` : '<div class="piece knife"></div>';
+
 function renderTray() {
-  const tray = $('tapeTray');
-  const n = S.mode === 'play' ? S.board?.tape ?? 0 : 0;
-  tray.hidden = !n;
-  if (!n) return;
-  const left = tapeLeft(S.board, S.hp);
-  tray.classList.toggle('armed', !!S.tapeMode);
-  tray.classList.toggle('off', S.won || !left);
-  tray.title = t('tapeTip');
-  tray.innerHTML = Array.from({ length: n }, (_, i) => `<div class="piece${i >= left ? ' used' : ''}"></div>`).join('');
+  const tray = $('tapeTray'), b = S.board;
+  const on = S.mode === 'play' && !!b && (b.tape > 0 || b.tools);
+  tray.hidden = !on;
+  if (!on) return;
+  const hp = S.hp, tool = S.tool;
+  let html = '';
+  if (b.tape) {
+    const left = tapeLeft(b, hp);
+    for (let i = 0; i < b.tape; i++) html += `<div class="piece${i >= left ? ' used' : tool?.kind === 'tape' ? ' armed' : ''}" data-tool="tape"></div>`;
+  }
+  b.retouch.forEach((k, i) => {
+    const used = !!hp[b.offRetouch + i];
+    html += `<div class="piece dab${used ? ' used' : tool?.kind === 'retouch' && tool.i === i ? ' armed' : ''}" data-tool="retouch" data-i="${i}" style="--c:var(--p${k})"></div>`;
+  });
+  const splits = splitLeft(b, hp);
+  for (let i = 0; i < b.split; i++) html += `<div class="piece knife${i >= splits ? ' used' : tool?.kind === 'split' ? ' armed' : ''}" data-tool="split"></div>`;
+  tray.classList.toggle('off', S.won || !toolsOf().length);
+  tray.title = t(b.tools ? 'toolTip' : 'tapeTip');
+  tray.innerHTML = html;
 }
 function trayDown(e) {
   const piece = e.target.closest('.piece:not(.used)');
-  if (!piece || S.mode !== 'play' || S.won || S.busy || tapeLeft(S.board, S.hp) <= 0) return;
+  if (!piece || S.mode !== 'play' || S.won || S.busy || isRuined(S.board, S.hp)) return;
   e.preventDefault();
+  const tool = { kind: piece.dataset.tool, ...(piece.dataset.i != null ? { i: +piece.dataset.i } : {}) };
+  const canDrop = tool.kind === 'tape' ? c => canTape(S.board, S.hp, c)
+    : tool.kind === 'retouch' ? c => canRetouch(S.board, S.hp, tool.i, c) : null; // the knife is click-only
   const x0 = e.clientX, y0 = e.clientY;
   // with a finger (Steam Deck touchscreen) the piece rides above the fingertip, and the cell under
   // the piece -- not under the finger -- is where it lands, so the target is never hidden
@@ -408,18 +442,20 @@ function trayDown(e) {
   const target = ev => { // the empty cell under the piece (not under a finger), or -1
     const el = document.elementFromPoint(ev.clientX, ev.clientY - lift)?.closest('#board .cell');
     const c = el ? +el.dataset.c : -1;
-    return c >= 0 && canTape(S.board, S.hp, c) ? c : -1;
+    return c >= 0 && canDrop(c) ? c : -1;
   };
   const move = ev => {
+    if (!canDrop) return;
     if (!ghost && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;
     if (!ghost) {
       ghost = document.createElement('div');
-      ghost.className = 'tape-ghost';
-      ghost.style.width = S.size + 'px'; // cell-sized: the X you drag is the X that lands
+      ghost.className = tool.kind === 'tape' ? 'tape-ghost' : 'tape-ghost dab-ghost';
+      if (tool.kind === 'retouch') ghost.style.setProperty('--c', `var(--p${S.board.retouch[tool.i]})`);
+      ghost.style.width = S.size + 'px'; // cell-sized: what you drag is what lands
       ghost.style.height = S.size + 'px';
       document.body.append(ghost);
       piece.classList.add('lifted');
-      S.tapeMode = false; $('board').classList.remove('taping');
+      if (S.tool) { S.tool = null; renderBoard(); }
     }
     ghost.style.left = ev.clientX + 'px';
     ghost.style.top = ev.clientY - lift + 'px';
@@ -431,26 +467,49 @@ function trayDown(e) {
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', end);
     window.removeEventListener('pointercancel', end);
-    if (!ghost) { if (ev.type === 'pointerup') toggleTape(); return; } // a click, not a drag
+    if (!ghost) { if (ev.type === 'pointerup') armTool(tool); return; } // a click, not a drag
     ghost.remove();
     piece.classList.remove('lifted');
     const c = target(ev); // where it is let go, not where it last moved
     mark(-1);
-    if (c >= 0 && ev.type === 'pointerup') placeTape(c, 'drag');
+    if (c >= 0 && ev.type === 'pointerup') { if (tool.kind === 'tape') placeTape(c, 'drag'); else placeRetouch(tool.i, c, 'drag'); }
   };
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', end);
   window.addEventListener('pointercancel', end);
 }
 
-function toggleTape() {
-  if (S.mode !== 'play' || S.won || S.busy || !S.board.tape) return;
-  if (!S.tapeMode && tapeLeft(S.board, S.hp) <= 0) return;
-  S.tapeMode = !S.tapeMode;
-  renderBoard(); updateHud();
+/** Pick a tool up, or put it back if it is the one in hand. */
+function armTool(tool) {
+  if (S.mode !== 'play' || S.won || S.busy || isRuined(S.board, S.hp)) return;
+  if (sameTool(S.tool, tool)) S.tool = null;
+  else {
+    const have = toolsOf().find(x => sameTool(x, tool));
+    if (!have) return;
+    S.tool = tool.kind === 'retouch' ? { kind: 'retouch', i: tool.i } : tool.kind === 'split' ? { kind: 'split', stage: 'pick' } : { kind: 'tape' };
+    S.lastTool = S.tool;
+  }
+  redrawTool();
 }
+function toggleTape() { if (S.board?.tape) armTool({ kind: 'tape' }); }
+function dropTool() { if (S.tool) { S.tool = null; redrawTool(); } }
+function redrawTool() { renderBoard(); updateHud(); if (S.padActive) padHover(); }
+
+// A click on the board while a tool is in hand.
+function toolAt(c) {
+  const tool = S.tool, b = S.board;
+  if (tool.kind === 'tape') return placeTape(c);
+  if (tool.kind === 'retouch') return placeRetouch(tool.i, c);
+  const t = b.tileAt[c];
+  if (tool.stage !== 'color' && t >= 0 && canSplitTile(b, S.hp, t)) S.tool = { ...tool, stage: 'where', t }; // (another) mixed tile
+  else if (tool.stage === 'where' && canSplit(b, S.hp, tool.t, c, b.tileColor[tool.t])) S.tool = { ...tool, stage: 'color', cell: c, k: b.mixColor[tool.t] };
+  else if (tool.stage === 'color' && c === tool.cell) return doSplit(tool.t, c, tool.k);
+  else S.tool = null; // a click anywhere else puts the knife back
+  redrawTool();
+}
+
 function placeTape(c, via = 'click') {
-  S.tapeMode = false;
+  S.tool = null;
   if (!canTape(S.board, S.hp, c)) { renderBoard(); updateHud(); return; }
   S.hintCell = -1;
   clearRays();
@@ -461,10 +520,54 @@ function placeTape(c, via = 'click') {
   renderBoard();
   afterMove();
 }
+function placeRetouch(i, c, via = 'click') {
+  S.tool = null;
+  if (!canRetouch(S.board, S.hp, i, c)) { renderBoard(); updateHud(); return; }
+  S.hintCell = -1;
+  clearRays();
+  log('retouch', { cell: c, color: COLOR_CHARS[S.board.retouch[i]], via: S.replaying ? undefined : via, replay: !!S.replaying || undefined });
+  S.hist.push(S.hp);
+  S.hp = applyRetouch(S.board, S.hp, i, c);
+  noteBlunder();
+  renderBoard();
+  afterMove();
+}
+function doSplit(t, c, k) {
+  S.tool = null;
+  if (!canSplit(S.board, S.hp, t, c, k)) { renderBoard(); updateHud(); return; }
+  S.hintCell = -1;
+  clearRays();
+  log('split', { from: S.board.tileCell[t], cell: c, color: COLOR_CHARS[k], replay: !!S.replaying || undefined });
+  S.hist.push(S.hp);
+  S.hp = applySplit(S.board, S.hp, t, c, k);
+  noteBlunder();
+  renderBoard();
+  afterMove();
+}
+
+// Marks for the tool in hand: which mixed tiles can be split, where a half can go, and the pigment
+// chooser (two half dabs over the target cell: click one; on a pad, left/right and A).
+function renderToolMarks() {
+  const pick = $('splitPick'), tool = S.tool, b = S.board;
+  pick.hidden = true;
+  if (S.mode !== 'play' || tool?.kind !== 'split') return;
+  if (tool.stage === 'pick') for (let t = 0; t < b.nTiles; t++) { if (canSplitTile(b, S.hp, t)) cellEl(b.tileCell[t])?.classList.add('can-split'); }
+  if (tool.stage === 'where' || tool.stage === 'color') {
+    cellEl(b.tileCell[tool.t])?.classList.add('split-from');
+    for (let c = 0; c < b.w * b.h; c++) if (canSplit(b, S.hp, tool.t, c, b.tileColor[tool.t])) cellEl(c)?.classList.add('split-to');
+  }
+  if (tool.stage !== 'color') return;
+  const s = S.size;
+  pick.hidden = false;
+  pick.style.width = pick.style.height = s + 'px';
+  pick.style.transform = `translate(${(tool.cell % b.w) * s}px, ${Math.floor(tool.cell / b.w) * s}px)`;
+  pick.innerHTML = [b.tileColor[tool.t], b.mixColor[tool.t]].map(k =>
+    `<button class="half${k === tool.k ? ' sel' : ''}" data-k="${k}" style="--c:var(--p${k})" title="${PIGMENTS[k]}"></button>`).join('');
+}
 
 async function strikeAt(c) {
   if (S.won || isRuined(S.board, S.hp)) return;
-  if (S.tapeMode && !S.busy) return placeTape(c);
+  if (S.tool && !S.busy) return toolAt(c);
   if (S.busy) { S.queued = c; return; } // fast players: run it right after the animation
   const r = probe(S.board, S.hp, c);
   if (!r) return;
@@ -481,7 +584,7 @@ async function strikeAt(c) {
   S.busy = true;
   const gen = S.gen;
   for (const t of r.hits) {
-    const tile = cellEl(S.board.tileCell[t]).querySelector('.tile:not(.under)');
+    const tile = cellEl(cellOf(S.board, t)).querySelector('.tile:not(.under)');
     tile.classList.add(S.hp[t] >= 2 ? 'strip' : 'dissolve');
   }
   await sleep(280);
@@ -557,7 +660,7 @@ function win() {
   $('overlay').innerHTML = `<div>
     <h2>${t('restored')}</h2>
     <div class="stars">${stars(strikes, par)}</div>
-    <p>${t(S.board.tape ? 'resultMoves' : 'result', { s: strikes, p: par ?? '?' })}${S.hints ? t('hints', { n: S.hints }) : ''}</p>
+    <p>${t(S.board.tape || S.board.tools ? 'resultMoves' : 'result', { s: strikes, p: par ?? '?' })}${S.hints ? t('hints', { n: S.hints }) : ''}</p>
     ${chJustDone ? `<p class="chapter-done">${t('chapterDone', { n: chapterNo(ch), name: lt(ch, 'name') })}</p>` : ''}
     <button id="ovRetry">${t('retry')}</button>
     ${extra ? `<button id="ovExtra" class="extra${next ? '' : ' primary'}">${t('extra')}: ${escapeHtml(lt(extra, 'name'))}</button>` : ''}
@@ -619,7 +722,7 @@ function onMute() {
 function undo() {
   if (S.busy || !S.hist.length || S.mode !== 'play') return;
   log('undo', { wasWon: S.won || undefined });
-  S.hp = S.hist.pop(); S.won = false; S.hintCell = -1; S.tapeMode = false;
+  S.hp = S.hist.pop(); S.won = false; S.hintCell = -1; S.tool = null;
   forgetBlunder();
   $('overlay').hidden = true;
   renderBoard(); afterMove();
@@ -627,7 +730,7 @@ function undo() {
 function restart() {
   if (S.busy || S.mode !== 'play') return;
   log('restart', { strikes: S.hist.length, wasWon: S.won || undefined });
-  S.hp = S.board.initHp.slice(); S.hist = []; S.won = false; S.hintCell = -1; S.tapeMode = false;
+  S.hp = S.board.initHp.slice(); S.hist = []; S.won = false; S.hintCell = -1; S.tool = null;
   forgetBlunder();
   $('overlay').hidden = true;
   renderBoard(); afterMove();
@@ -642,12 +745,14 @@ function hint() {
     catch { $('status').textContent = t('hintTooBig'); return; }
   } else if (a.solvable) first = a.solution[0];
   else lost = true;
-  log('hint', lost ? { lost: true } : { cell: first.cell, tape: first.tape || undefined });
+  log('hint', lost ? { lost: true } : { cell: first.cell, tape: first.tape || undefined, retouch: first.retouch, split: first.split });
   if (lost) { $('status').textContent = t('hintLost'); $('status').className = 'bad'; return; }
   S.hints++;
   S.hintCell = first.cell;
   cellEl(first.cell)?.classList.add('hint');
   if (first.tape) { $('status').textContent = t(S.padActive ? 'hintTapePad' : 'hintTape'); $('status').className = ''; }
+  else if (first.retouch != null) { $('status').textContent = t('hintRetouch'); $('status').className = ''; }
+  else if (first.split != null) { cellEl(S.board.tileCell[first.split])?.classList.add('split-from'); $('status').textContent = t('hintSplit'); $('status').className = ''; }
 }
 
 async function replaySolution() {
@@ -659,7 +764,10 @@ async function replaySolution() {
     await sleep(300);
     for (const st of S.levelInfo.solution) {
       if (S.mode !== 'play') return;
-      if (st.tape) placeTape(st.cell); else await strikeAt(st.cell);
+      if (st.tape) placeTape(st.cell);
+      else if (st.retouch != null) placeRetouch(st.retouch, st.cell);
+      else if (st.split != null) doSplit(st.split, st.cell, st.color);
+      else await strikeAt(st.cell);
       await sleep(380);
     }
   } finally { S.replaying = false; }
@@ -681,7 +789,7 @@ function setEditRows(rows, def, under = null, mix = null, orig = null) {
   S.edit.orig = rows.map((_, y) => (orig?.[y] ?? '').padEnd(w, '.').slice(0, w).split(''));
   S.edit.info = null;
   $('editW').value = w; $('editH').value = rows.length;
-  if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; $('editTape').value = def.tape ?? 0; }
+  if (def) { $('editName').value = def.name ?? ''; $('editNote').value = def.note ?? ''; $('editTape').value = def.tape ?? 0; $('editRetouch').value = def.retouch ?? ''; $('editSplit').value = def.split ?? 0; }
   $('editStats').innerHTML = '';
 }
 function renderPalette() {
@@ -724,6 +832,10 @@ function editDef() {
   if (S.edit.orig.some(r => r.some(ch => ch !== '.'))) def.orig = S.edit.orig.map(r => r.join(''));
   const tape = Math.max(0, Math.min(5, +$('editTape').value | 0));
   if (tape) def.tape = tape;
+  const retouch = $('editRetouch').value.toUpperCase().replace(/[^A-F]/g, '').slice(0, 4);
+  if (retouch) def.retouch = retouch;
+  const split = Math.max(0, Math.min(3, +$('editSplit').value | 0));
+  if (split) def.split = split;
   return def;
 }
 function runEditAnalysis() {
@@ -810,7 +922,7 @@ function renderCursor() {
   const s = S.size, w = S.board.w;
   el.style.width = el.style.height = s + 'px';
   el.style.transform = `translate(${(S.cursor % w) * s}px, ${Math.floor(S.cursor / w) * s}px)`;
-  el.classList.toggle('taping', !!S.tapeMode);
+  el.classList.toggle('taping', !!S.tool);
 }
 function padHover() { // the lines of sight from the cursor, as a mouse hover would show them
   if (S.busy || S.won || !$('hoverRays').checked) return clearRays();
@@ -830,6 +942,12 @@ function padMove(dx, dy) {
     bs.forEach((b, j) => b.classList.toggle('pad-focus', j === i));
     return;
   }
+  if (S.xHold) return wheelPick(dx, dy); // X held: the D-pad chooses a tool, not a cell
+  if (wasActive && S.tool?.stage === 'color') { // the split chooser: left/right picks the pigment
+    const ks = [S.board.tileColor[S.tool.t], S.board.mixColor[S.tool.t]];
+    if (dx) { S.tool = { ...S.tool, k: ks[dx < 0 ? 0 : 1] }; renderToolMarks(); }
+    return;
+  }
   if (wasActive) { // the first touch of the pad only shows the cursor where it was
     const w = S.board.w, h = S.board.h;
     const x = Math.min(w - 1, Math.max(0, S.cursor % w + dx)), y = Math.min(h - 1, Math.max(0, Math.floor(S.cursor / w) + dy));
@@ -837,6 +955,42 @@ function padMove(dx, dy) {
   }
   renderCursor(); padHover();
 }
+// X: a short press picks up the last tool used (or puts the one in hand back); holding X shows the
+// tools around the cursor, one per direction, and the D-pad chooses (released X picks it up).
+const WHEEL_DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+function padToolPress() {
+  if (S.mode !== 'play' || !$('overlay').hidden) return;
+  S.xHold = { pick: null };
+  clearTimeout(S.xTimer);
+  S.xTimer = setTimeout(() => { if (S.xHold) showWheel(); }, 260);
+}
+function padToolRelease() {
+  clearTimeout(S.xTimer);
+  const h = S.xHold;
+  S.xHold = null;
+  $('toolWheel').hidden = true;
+  if (!h) return;
+  if (h.pick) return armTool(h.pick);
+  if (S.tool) return dropTool();
+  const list = toolsOf();
+  const tool = list.find(x => sameTool(x, S.lastTool)) ?? list[0];
+  if (tool) armTool(tool);
+}
+function showWheel() {
+  const el = $('toolWheel'), list = toolsOf(), w = S.board.w, s = S.size;
+  if (list.length < 2) return; // one tool: nothing to choose
+  el.hidden = false;
+  el.style.width = el.style.height = s + 'px';
+  el.style.transform = `translate(${(S.cursor % w) * s}px, ${Math.floor(S.cursor / w) * s}px)`;
+  el.innerHTML = list.slice(0, 4).map((tool, d) => `<div class="slot d${d}${sameTool(tool, S.xHold?.pick) ? ' sel' : ''}">${toolIcon(tool)}</div>`).join('');
+}
+function wheelPick(dx, dy) {
+  const d = WHEEL_DIRS.findIndex(([x, y]) => x === Math.sign(dx) && y === Math.sign(dy));
+  const tool = toolsOf().slice(0, 4)[d];
+  if (tool) S.xHold.pick = tool;
+  showWheel();
+}
+
 function stepLevel(dir) { // LB / RB: the previous or next painting that is open, in list order
   const order = [...S.chapters.flatMap(ch => S.levels.filter(d => d.chapter === ch.id)), ...S.levels.filter(d => !chapterOf(d)), ...store.custom];
   let i = order.indexOf(S.def);
@@ -865,9 +1019,9 @@ function padPress(name) {
     else if (name === 'menu') onMute();
     return;
   }
-  if (name === 'a') { clearRays(); strikeAt(S.cursor); }
-  else if (name === 'b') { if (S.tapeMode) toggleTape(); else undo(); }
-  else if (name === 'x') toggleTape();
+  if (name === 'a') { clearRays(); if (S.tool?.stage === 'color') doSplit(S.tool.t, S.tool.cell, S.tool.k); else strikeAt(S.cursor); }
+  else if (name === 'b') { if (S.tool) dropTool(); else undo(); }
+  else if (name === 'x') padToolPress();
   else if (name === 'y') { hint(); if (S.hintCell >= 0) S.cursor = S.hintCell; renderCursor(); }
   else if (name === 'view') restart();
   else if (name === 'menu') onMute();
@@ -911,7 +1065,7 @@ function wire() {
   board.addEventListener('mouseleave', () => { if (!S.busy) clearRays(); });
   window.addEventListener('pointermove', e => { if (S.padActive && e.pointerType === 'mouse' && (e.movementX || e.movementY)) setPadActive(false); });
   window.addEventListener('pointerdown', () => { if (S.padActive) setPadActive(false); });
-  startPad({ move: padMove, press: padPress, connect: p => log('pad', { id: p.id, mapping: p.mapping }) });
+  startPad({ move: padMove, press: padPress, release: n => { if (n === 'x') padToolRelease(); }, connect: p => log('pad', { id: p.id, mapping: p.mapping }) });
   window.addEventListener('mouseup', () => { S.edit.painting = false; });
   window.addEventListener('touchend', () => { S.edit.painting = false; });
   window.addEventListener('touchcancel', () => { S.edit.painting = false; });
@@ -927,7 +1081,11 @@ function wire() {
 
   $('undo').onclick = undo;
   $('tapeTray').addEventListener('pointerdown', trayDown);
-  $('editTape').onchange = () => { S.edit.info = null; };
+  $('splitPick').addEventListener('click', e => {
+    const h = e.target.closest('.half');
+    if (h && S.tool?.stage === 'color') doSplit(S.tool.t, S.tool.cell, +h.dataset.k);
+  });
+  $('editTape').onchange = $('editRetouch').onchange = $('editSplit').onchange = () => { S.edit.info = null; };
   $('restart').onclick = restart;
   $('hint').onclick = hint;
   $('devToggle').onchange = e => { S.dev = e.target.checked; log('dev', { on: S.dev }); if (S.dev) refreshNow(); renderDev(); updateHud(); };
@@ -972,6 +1130,8 @@ function wire() {
     if (def.mix) out.mix = def.mix;
     if (def.orig) out.orig = def.orig;
     if (def.tape) out.tape = def.tape;
+    if (def.retouch) out.retouch = def.retouch;
+    if (def.split) out.split = def.split;
     if (a && a !== 'big' && a.solvable) out.par = a.minStrikes;
     $('json').value = JSON.stringify(out, null, 2);
   };
@@ -991,6 +1151,7 @@ function wire() {
     else if (k === 'r') restart();
     else if (k === 'h') hint();
     else if (k === 't') toggleTape();
+    else if (k === 'escape') dropTool();
     else if (k === 'm') onMute();
     else if (k === 'd' && IS_LOCAL) { $('devToggle').checked = !S.dev; $('devToggle').onchange({ target: $('devToggle') }); }
   });

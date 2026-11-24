@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=20261124-7">
+<link rel="stylesheet" href="style.css?v=20261125-1">
 </head>
 <body>
 <!-- marbling for mixed tiles: turbulence pushes the pigment bands around (see .tile.mixed::before).
@@ -61,6 +61,8 @@
         <div id="board"></div>
         <svg id="rays"></svg>
         <div id="padCursor" hidden></div>
+        <div id="splitPick" hidden></div>
+        <div id="toolWheel" hidden></div>
         <div id="overlay" hidden></div>
       </div>
     </div>
@@ -104,6 +106,8 @@
       <input id="editName" placeholder="Name" data-i18n-ph="namePh">
       <input id="editNote" placeholder="Note shown to the player" data-i18n-ph="notePh">
       <label class="row"><span data-i18n="tapeCount">Masking tape</span> <input type="number" id="editTape" min="0" max="5" value="0"></label>
+      <label class="row"><span data-i18n="retouchCount">Retouch dabs</span> <input id="editRetouch" maxlength="4" placeholder="AB" style="width:5em"></label>
+      <label class="row"><span data-i18n="splitCount">Splits</span> <input type="number" id="editSplit" min="0" max="3" value="0"></label>
       <div class="row">
         <button id="analyze" class="primary" data-i18n="analyze">Analyze</button>
         <button id="testPlay" data-i18n="testPlay">Test play</button>
@@ -120,6 +124,6 @@
   </aside>
 </main>
 
-<script type="module" src="app.js?v=20261124-7"></script>
+<script type="module" src="app.js?v=20261124-8"></script>
 </body>
 </html>

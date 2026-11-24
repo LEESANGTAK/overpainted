@@ -10,7 +10,7 @@
 //   deadStates        reachable positions with paint left and no effective strike
 //   unsolvableRatio   share of reachable positions from which clearing is impossible
 
-import { isClear, isRuined } from './rules.js';
+import { isRuined, paintGone, listToolMoves, applyToolMove } from './rules.js';
 
 export class SearchLimit extends Error {
   constructor(states) { super(`State limit reached (${states})`); this.states = states; }
@@ -38,18 +38,22 @@ function buildRays(board) {
  * A tape move ({cell, hits: [], tape: true}) tapes that cell; it costs a move like a strike.
  */
 function movesFast(board, rays, hp) {
-  const { tileAt, blocked, tileColor, underColor, mixColor, nTiles } = board;
-  // pigments a tile counts as (bitmask); a mixed single tile counts as both of its pigments
-  const mask = t => (1 << (hp[t] >= 2 ? tileColor[t] : underColor[t])) | (mixColor[t] >= 0 && hp[t] === 1 ? 1 << mixColor[t] : 0);
+  const { tileAt, blocked, tileColor, underColor, mixColor, nTiles, tools, offAdd, offCol } = board;
+  // pigments a tile counts as (bitmask); a mixed single tile counts as both of its pigments;
+  // an added tile (id >= offAdd) is one pigment, stored in the state
+  const mask = t => t >= offAdd && tools ? 1 << hp[offCol + (t - offAdd)]
+    : (1 << (hp[t] >= 2 ? tileColor[t] : underColor[t])) | (mixColor[t] >= 0 && hp[t] === 1 ? 1 << mixColor[t] : 0);
   const N = board.w * board.h;
-  const taped = board.tape > 0 ? cc => hp[nTiles + cc] === 1 : () => false;
+  const taped = board.tape > 0 || tools ? cc => hp[nTiles + cc] === 1 : () => false;
+  // the live tile on a cell: an added tile first (it may sit where a split tile was), then the level tile
+  const tileOn = tools ? cc => hp[offAdd + cc] ? offAdd + cc : (tileAt[cc] >= 0 && hp[tileAt[cc]] > 0 ? tileAt[cc] : -1)
+    : cc => tileAt[cc] >= 0 && hp[tileAt[cc]] > 0 ? tileAt[cc] : -1;
   const out = new Map();
   const empties = [];
   const found = [-1, -1, -1, -1];
   for (let c = 0; c < N; c++) {
     if (blocked[c] || taped(c)) continue;
-    const t0 = tileAt[c];
-    if (t0 >= 0 && hp[t0] > 0) continue;
+    if (tileOn(c) >= 0) continue;
     empties.push(c);
     const r = rays[c];
     let n = 0;
@@ -59,8 +63,8 @@ function movesFast(board, rays, hp) {
       for (let i = 0; i < list.length; i++) {
         const cc = list[i];
         if (blocked[cc] || taped(cc)) break;
-        const t = tileAt[cc];
-        if (t >= 0 && hp[t] > 0) { found[d] = t; n++; break; }
+        const t = tileOn(cc);
+        if (t >= 0) { found[d] = t; n++; break; }
       }
     }
     if (n < 2) continue;
@@ -73,12 +77,13 @@ function movesFast(board, rays, hp) {
     }
     if (hits.length < 2) continue;
     hits.sort((a, b) => a - b);
-    // up to 4 tile indices < 256 -> one 32-bit-safe number key
+    // up to 4 ids < 1023 -> one exact number key (1024^4 = 2^40)
     let key = 0;
-    for (const t of hits) key = key * 256 + (t + 1);
+    for (const t of hits) key = key * 1024 + (t + 1);
     if (!out.has(key)) out.set(key, { cell: c, hits });
   }
   const moves = [...out.values()];
+  if (tools) { for (const m of listToolMoves(board, hp)) moves.push({ ...m, hits: [] }); return moves; }
   if (board.tape > 0) {
     let used = 0;
     for (let c = 0; c < N; c++) used += hp[nTiles + c];
@@ -92,11 +97,15 @@ function keyOf(hp) {
 }
 
 function step(board, hp, m) {
+  if (m.retouch != null || m.split != null) return applyToolMove(board, hp, m);
   const n = hp.slice();
   if (m.tape) n[board.nTiles + m.cell] = 1;
   else for (const t of m.hits) n[t]--;
   return n;
 }
+
+/** The fields that say what a move is, for solutions and hints. */
+const moveOut = m => ({ cell: m.cell, hits: m.hits, ...(m.tape ? { tape: true } : {}), ...(m.retouch != null ? { retouch: m.retouch } : {}), ...(m.split != null ? { split: m.split, color: m.color } : {}) });
 
 /**
  * Full analysis from `hp` (defaults to the level start).
@@ -118,11 +127,11 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000, caref
     let r;
     if (isRuined(board, state)) { // an original was lifted: lost, whatever is left
       r = { f: Infinity, p: 0, ways: 0, nMoves: 0, safe: 0 };
-    } else if (isClear(state, board.nPaint)) {
+    } else if (paintGone(board, state)) {
       r = { f: 0, p: 1, ways: 1, nMoves: 0, safe: 0 };
     } else {
       let moves = movesFast(board, rays, state);
-      if (careful) moves = moves.filter(m => !m.hits.some(t => t >= board.nPaint));
+      if (careful) moves = moves.filter(m => !m.hits.some(t => t >= board.nPaint && t < board.nTiles));
       if (moves.length === 0) {
         dead++;
         r = { f: Infinity, p: 0, ways: 0, nMoves: 0, safe: 0 };
@@ -151,14 +160,14 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000, caref
   const solution = [];
   if (root.f < Infinity) {
     let state = hp;
-    while (!isClear(state, board.nPaint)) {
+    while (!paintGone(board, state)) {
       const want = memo.get(keyOf(state)).f - 1;
       let chosen = null;
       for (const m of movesFast(board, rays, state)) {
         const next = step(board, state, m);
         if (memo.get(keyOf(next))?.f === want) { chosen = { m, next }; break; } // (careful: ruinous moves were never visited)
       }
-      solution.push({ cell: chosen.m.cell, hits: chosen.m.hits, ...(chosen.m.tape ? { tape: true } : {}) });
+      solution.push(moveOut(chosen.m));
       state = chosen.next;
     }
   }
@@ -188,14 +197,14 @@ export function findSolution(board, { hp = board.initHp, maxStates = 2_000_000 }
   const deadSet = new Set();
   function dfs(state, path) {
     if (isRuined(board, state)) return false;
-    if (isClear(state, board.nPaint)) return true;
+    if (paintGone(board, state)) return true;
     const key = keyOf(state);
     if (deadSet.has(key)) return false;
     if (deadSet.size >= maxStates) throw new SearchLimit(deadSet.size);
     const moves = movesFast(board, rays, state);
     moves.sort((a, b) => b.hits.length - a.hits.length);
     for (const m of moves) {
-      path.push({ cell: m.cell, hits: m.hits, ...(m.tape ? { tape: true } : {}) });
+      path.push(moveOut(m));
       if (dfs(step(board, state, m), path)) return true;
       path.pop();
     }

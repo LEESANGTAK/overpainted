@@ -64,6 +64,15 @@
       }
     },
     {
+      "id": "tools",
+      "name": "New Tools (trial)",
+      "note": "Paint you add, paint you cut.",
+      "ko": {
+        "name": "새 도구 (시험)",
+        "note": "더하는 물감, 가르는 물감."
+      }
+    },
+    {
       "id": "together",
       "name": "All Together",
       "note": "Everything so far, in small paintings.",
@@ -1504,6 +1513,62 @@
         "optimalSolutions": 1,
         "states": 37,
         "pCareful": 0.025
+      }
+    },
+    {
+      "id": "p-retouch1",
+      "chapter": "tools",
+      "name": "A Partner, Painted",
+      "note": "One blue has no partner on the canvas. You have one dab of blue: put it where it counts. Your dab has to come off too.",
+      "rows": [
+        "AA..",
+        "A..A",
+        ".B..",
+        "...."
+      ],
+      "retouch": "B",
+      "ko": {
+        "name": "짝을 그려 주다",
+        "note": "파랑 하나는 캔버스에 짝이 없습니다. 파랑 한 점이 있으니 쓸모 있는 자리에 찍으세요. 찍은 점도 다시 벗겨야 합니다."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.0238,
+        "trapBits": 5.39,
+        "startMoves": 14,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 91
+      }
+    },
+    {
+      "id": "p-split1",
+      "chapter": "tools",
+      "name": "Both Sides Short",
+      "note": "Red is one short, and so is blue. Cut the mixed dab in two: one pigment goes to an empty neighbour.",
+      "rows": [
+        "....",
+        ".AB.",
+        ".A.A"
+      ],
+      "mix": [
+        "....",
+        "....",
+        ".B.."
+      ],
+      "split": 1,
+      "ko": {
+        "name": "양쪽 다 모자랄 때",
+        "note": "빨강도 하나, 파랑도 하나 모자랍니다. 칼로 혼색을 둘로 나눠, 한 색을 옆 빈칸으로 보내세요."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.025,
+        "trapBits": 5.32,
+        "startMoves": 5,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 14
       }
     },
     {

@@ -16,6 +16,7 @@ const REPEAT_DELAY = 260, REPEAT_EVERY = 110;
  * Start listening. `on` receives:
  *   on.move(dx, dy)   a step of the cursor (D-pad or left stick)
  *   on.press(name)    'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'view' | 'menu'
+ *   on.release(name)  when a button is let go
  *   on.connect(pad)   the first time a pad is seen
  */
 export function startPad(on) {
@@ -45,6 +46,7 @@ export function startPad(on) {
       }
     }
     for (const name of held) if (!down.has(name)) on.press(name);
+    for (const name of down) if (!held.has(name)) on.release?.(name);
     down.clear(); for (const name of held) down.add(name);
 
     const d = dx || dy ? `${Math.sign(dx)},${Math.sign(dy)}` : null;
