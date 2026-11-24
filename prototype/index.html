@@ -8,14 +8,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=20261124-4">
+<link rel="stylesheet" href="style.css?v=20261124-5">
 </head>
 <body>
-<!-- marbling for mixed tiles: turbulence pushes the pigment bands around (see .tile.mixed::before) -->
+<!-- marbling for mixed tiles: turbulence pushes the pigment bands around (see .tile.mixed::before).
+     Several swirls, so no two mixed dabs look stamped from one mould; app.js picks one per tile. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <filter id="marble" x="-20%" y="-20%" width="140%" height="140%">
+  <filter id="marble0" x="-20%" y="-20%" width="140%" height="140%">
     <feTurbulence type="turbulence" baseFrequency="0.022" numOctaves="1" seed="7" result="t"/>
     <feDisplacementMap in="SourceGraphic" in2="t" scale="48" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="marble1" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="turbulence" baseFrequency="0.016" numOctaves="2" seed="23" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="56" xChannelSelector="G" yChannelSelector="B"/>
+  </filter>
+  <filter id="marble2" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="turbulence" baseFrequency="0.03 0.018" numOctaves="1" seed="41" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="40" xChannelSelector="R" yChannelSelector="B"/>
+  </filter>
+  <filter id="marble3" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="5" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="64" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="marble4" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="turbulence" baseFrequency="0.014 0.026" numOctaves="1" seed="88" result="t"/>
+    <feDisplacementMap in="SourceGraphic" in2="t" scale="52" xChannelSelector="B" yChannelSelector="R"/>
   </filter>
 </svg>
 <header>
@@ -102,6 +119,6 @@
   </aside>
 </main>
 
-<script type="module" src="app.js?v=20261124-5"></script>
+<script type="module" src="app.js?v=20261124-6"></script>
 </body>
 </html>

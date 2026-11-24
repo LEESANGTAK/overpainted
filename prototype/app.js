@@ -164,7 +164,15 @@ function dabStyle(id, c) {
   const r = () => ((s = Math.imul(s ^ (s >>> 15), 2246822507) + 0x9e3779b9 >>> 0) / 4294967296);
   const p = () => Math.round(6 + r() * 16) + '%';
   return `;--rot:${(r() * 8 - 4).toFixed(1)}deg;--br:${p()} ${p()} ${p()} ${p()} / ${p()} ${p()} ${p()} ${p()}`
-    + `;--br2:${p()} ${p()} ${p()} ${p()} / ${p()} ${p()} ${p()} ${p()};--grain:${100 + Math.round(r() * 30)}deg`;
+    + `;--br2:${p()} ${p()} ${p()} ${p()} / ${p()} ${p()} ${p()} ${p()};--grain:${100 + Math.round(r() * 30)}deg`
+    + marbleStyle(r);
+}
+// A mixed dab's marbling (used only by .tile.mixed): one of the #marble0..4 swirls, the angle of the
+// pigment bands, their width, and a 40-60% share of each pigment, so both always show.
+function marbleStyle(r) {
+  const swirl = Math.floor(r() * 5), ang = Math.round(r() * 180);
+  const band = 22 + r() * 12, b1 = band * (0.4 + r() * 0.2);
+  return `;--marble:url(#marble${swirl});--ang:${ang}deg;--b1:${b1.toFixed(1)}%;--b2:${band.toFixed(1)}%`;
 }
 
 function tileHtml(k, varnish, u = k, dab = '', mix = -1) {

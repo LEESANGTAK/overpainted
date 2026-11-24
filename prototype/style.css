@@ -150,8 +150,9 @@ aside { overflow-y: auto; padding: 14px; background: var(--panel); }
    Bands stay broad so the dab never blurs into a flat purple. */
 .tile.mixed::before {
   content: ''; position: absolute; inset: -25%; z-index: 0;
-  background: repeating-linear-gradient(calc(45deg + var(--rot, 0deg) * 20), var(--c) 0 13%, var(--c2) 13% 26%);
-  filter: url(#marble);
+  /* per tile (app.js dabStyle): which swirl, the band angle, band width and how much of each pigment */
+  background: repeating-linear-gradient(var(--ang, 45deg), var(--c) 0 var(--b1, 13%), var(--c2) var(--b1, 13%) var(--b2, 26%));
+  filter: var(--marble, url(#marble0));
 }
 /* the same light, grain and shadow as any other dab, laid over the marbled paint */
 .tile.mixed::after {
