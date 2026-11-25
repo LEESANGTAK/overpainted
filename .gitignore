@@ -10,3 +10,4 @@ Thumbs.db
 
 # collector read key (docs/playtest-setup.md)
 playtests/collector.json
+playtests/archive-*/

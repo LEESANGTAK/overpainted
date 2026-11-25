@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, toOrig, canTape, applyTape, tapeLeft, isTaped, isRuined, isWon, isOriginal, paintGone, listToolMoves, applyToolMove, applyRetouch, canRetouch, retouchLeft, applySplit, canSplit, splitLeft, tileOn, maskOf, layersLeft, canPalette, applyPalette, paletteMask, paletteLeft, paletteSources } from '../core/rules.js';
 import { analyze } from '../core/solver.js';
-import { matchTrap, checkTraps } from '../core/traps.js';
 
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('ok', name); };
@@ -195,46 +194,6 @@ test('every shipped level sits in a known chapter, chapters in one run each', ()
     if (seen.at(-1) !== d.chapter) { assert.ok(!seen.includes(d.chapter), `${d.id}: chapter ${d.chapter} is split`); seen.push(d.chapter); }
   }
   for (const c of data.chapters) assert.ok(data.levels.some(d => d.chapter === c.id && !d.extra), `${c.id} has a main level`);
-});
-
-test('mid-game traps: valid cells, and each one catches a real blunder', () => {
-  const data = JSON.parse(readFileSync(new URL('../levels/prototype.json', import.meta.url), 'utf8'));
-  for (const def of data.levels.filter(d => d.traps)) {
-    const b = parseLevel(def);
-    checkTraps(def, b);
-    for (const trap of def.traps) assert.ok(trap.ko?.voice?.stuck && trap.voice.win && trap.ko.voice.win, `${def.id}: trap lines in both languages`);
-    const memo = new Map();
-    const ok = hp => { const k = hp.join(); if (!memo.has(k)) memo.set(k, analyze(b, { hp }).solvable); return memo.get(k); };
-    const hit = new Set(), seen = new Set(), stack = [[b.initHp, 0]];
-    while (stack.length) {
-      const [hp, depth] = stack.pop();
-      const k = hp.join() + '|' + depth;
-      if (seen.has(k) || !ok(hp)) continue;
-      seen.add(k);
-      const moves = listMoves(b, hp).map(m => ({ hits: m.hits }));
-      if (tapeLeft(b, hp) > 0) for (let c = 0; c < b.w * b.h; c++) if (canTape(b, hp, c)) moves.push({ tape: true, cell: c });
-      for (const m of moves) {
-        const next = m.tape ? applyTape(b, hp, m.cell) : applyHits(hp, m.hits);
-        if (ok(next)) stack.push([next, depth + 1]);
-        else { const t = matchTrap(def, b, m, depth); if (t) hit.add(t); }
-      }
-    }
-    def.traps.forEach((t, i) => assert.ok(hit.has(t), `${def.id}: trap ${i} never catches a blunder`));
-  }
-});
-
-test('trap matching: lifts is a subset, tape cell or any, after N moves', () => {
-  const def = { rows: ['A.A.B', '.....'], traps: [
-    { lifts: [[0, 0]], after: 1, voice: { stuck: 'late' } },
-    { lifts: [[0, 0], [2, 0]], voice: { stuck: 'pair' } },
-    { tape: [1, 1], voice: { stuck: 'here' } },
-    { tape: 'any', voice: { stuck: 'tape' } }] };
-  const b = parseLevel(def);
-  assert.equal(matchTrap(def, b, { hits: [0, 1] }, 0).voice.stuck, 'pair');
-  assert.equal(matchTrap(def, b, { hits: [0, 1] }, 1).voice.stuck, 'late');
-  assert.equal(matchTrap(def, b, { hits: [1, 2] }, 0), null);
-  assert.equal(matchTrap(def, b, { tape: true, cell: 6 }).voice.stuck, 'here');
-  assert.equal(matchTrap(def, b, { tape: true, cell: 7 }).voice.stuck, 'tape');
 });
 
 test('original paint: seen and pairs, but lifting it loses; the level ends without it', () => {

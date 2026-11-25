@@ -36,7 +36,6 @@ node tools/test.mjs         # 규칙/솔버 테스트
 |---|---|
 | `core/rules.js` | 게임 규칙 (브라우저·Node 공용). 레벨 텍스트 포맷 설명 포함 |
 | `core/solver.js` | 전수 탐색 솔버 + 난이도 지표 |
-| `core/traps.js` | 중반 함정: 판을 못 깨게 만든 수를 레벨의 `traps`와 맞춘다 (덧칠꾼 대사용, 지금 게임에서는 쓰지 않음) |
 | `prototype/mood.js` | 배경음악과 음소거. 판이 틀어진 뒤 늦게, 평온한 곡에서 어두운 곡으로 넘어간다 |
 | `tools/music.mjs` | ElevenLabs로 배경음악 두 곡 생성 (`ELEVENLABS_API_KEY`, Music Generation 권한 필요) |
 | `prototype/audio/` | 생성된 음악 (calm, lost) |
