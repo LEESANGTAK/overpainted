@@ -1827,6 +1827,39 @@
       }
     },
     {
+      "id": "p-beside",
+      "chapter": "together",
+      "name": "Beside the Original",
+      "note": "Two coats of red, right beside a red that stays.",
+      "rows": [
+        "...Ba",
+        "....A",
+        "A.B.B",
+        "..BB."
+      ],
+      "orig": [
+        ".....",
+        "....o",
+        ".....",
+        "....."
+      ],
+      "palette": 1,
+      "ko": {
+        "name": "원본 곁에서",
+        "note": "두 겹 빨강, 그 바로 곁에 남아야 할 빨강."
+      },
+      "par": 4,
+      "metrics": {
+        "pRandom": 0.0008,
+        "trapBits": 10.32,
+        "startMoves": 10,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 165,
+        "pCareful": 0.004
+      }
+    },
+    {
       "id": "p-redshare",
       "chapter": "together",
       "name": "Save One for Red",
