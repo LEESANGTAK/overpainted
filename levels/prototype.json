@@ -1616,6 +1616,39 @@
       }
     },
     {
+      "id": "p-orig4",
+      "chapter": "orig",
+      "name": "The Red You Can't Borrow",
+      "note": "The palette takes from original paint too, and that ruins the painting. One red is overpaint; the other is the painting's.",
+      "rows": [
+        "...B",
+        "A.BA",
+        ".B.B",
+        "..B."
+      ],
+      "orig": [
+        "....",
+        "o...",
+        "....",
+        "...."
+      ],
+      "palette": 1,
+      "ko": {
+        "name": "빌릴 수 없는 빨강",
+        "note": "팔레트는 원본에서도 물감을 덜어 옵니다. 그러면 그림이 망가집니다. 빨강 하나는 덧칠, 하나는 그림의 것입니다."
+      },
+      "par": 3,
+      "metrics": {
+        "pRandom": 0.0036,
+        "trapBits": 8.13,
+        "startMoves": 10,
+        "startSafe": 1,
+        "optimalSolutions": 1,
+        "states": 47,
+        "pCareful": 0.0139
+      }
+    },
+    {
       "id": "p-chain",
       "chapter": "together",
       "name": "Chain",

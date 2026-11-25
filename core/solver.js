@@ -10,7 +10,7 @@
 //   deadStates        reachable positions with paint left and no effective strike
 //   unsolvableRatio   share of reachable positions from which clearing is impossible
 
-import { isRuined, paintGone, listToolMoves, applyToolMove } from './rules.js';
+import { isRuined, paintGone, listToolMoves, applyToolMove, paletteSources } from './rules.js';
 
 export class SearchLimit extends Error {
   constructor(states) { super(`State limit reached (${states})`); this.states = states; }
@@ -112,7 +112,8 @@ const moveOut = m => ({ cell: m.cell, hits: m.hits, ...(m.tape ? { tape: true } 
  * Throws SearchLimit if more than `maxStates` positions are reachable.
  */
 // `careful`: model a player who never picks a strike that visibly lifts original paint (the damage
-// is plain to see), so pRandom measures what is left to think about once originals are avoided.
+// is plain to see), nor a palette dab that takes from it (the palette rings what it takes), so
+// pRandom measures what is left to think about once originals are avoided.
 export function analyze(board, { hp = board.initHp, maxStates = 1_000_000, careful = false } = {}) {
   if (board.nTiles > 255) throw new Error('Too many tiles for the solver (max 255)');
   const rays = buildRays(board);
@@ -131,7 +132,7 @@ export function analyze(board, { hp = board.initHp, maxStates = 1_000_000, caref
       r = { f: 0, p: 1, ways: 1, nMoves: 0, safe: 0 };
     } else {
       let moves = movesFast(board, rays, state);
-      if (careful) moves = moves.filter(m => !m.hits.some(t => t >= board.nPaint && t < board.nTiles));
+      if (careful) moves = moves.filter(m => !(m.palette ? paletteSources(board, state, m.cell) : m.hits).some(t => t >= board.nPaint && t < board.nTiles));
       if (moves.length === 0) {
         dead++;
         r = { f: Infinity, p: 0, ways: 0, nMoves: 0, safe: 0 };
