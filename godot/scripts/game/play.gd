@@ -1,9 +1,12 @@
 extends Control
-## Grey-box play screen (port stages 2-3): one painting at a time — strike, undo, restart, win, stars.
-## The screen is built in code; art and staging come later. A developer picker opens any level.
+## Grey-box play screen (port stages 2-4): one painting at a time — strike, undo, restart, win, stars.
+## The screen is built in code; art and staging come later. game.gd owns it and the list of paintings.
 ## Input: mouse, touch (taps arrive as clicks), keyboard and gamepad (a cursor on the board; see
 ## scripts/input/controls.gd). Not here yet: masking tape and palette controls (not in the demo
-## chapters), saving, sound.
+## chapters), sound.
+
+signal back_requested   ## the player wants the list of paintings
+signal level_opened     ## a painting was opened (from the result card, LB/RB, ...)
 
 const Rules := preload("res://scripts/core/rules.gd")
 const LevelData := preload("res://scripts/game/level_data.gd")
@@ -18,6 +21,7 @@ const GOLD := Color("#b8915c")
 const BAD := Color("#d9826a")
 
 var data: LevelData
+var save                    ## save_data.gd
 var index := -1             ## current level in data.levels
 var def: Dictionary
 var board: Rules.Board
@@ -39,30 +43,53 @@ var view: BoardView
 var _chapter_label: Label
 var _name_label: Label
 var _note_label: Label
-var _picker: OptionButton
+var _back: Button
+var _picker: OptionButton   ## developer picker (editor runs only)
 var _hud: Label
 var _status: Label
+var _undo: Button
+var _restart: Button
+var _keys: Label
 var _overlay: Control
 var _ov_title: Label
 var _ov_stars: Label
 var _ov_result: Label
-var _ov_next: Button
+var _ov_chapter: Label
 var _ov_retry: Button
-var _keys: Label
+var _ov_extra: Button
+var _ov_next: Button
+var _ov_list: Button
+var _extra_index := -1
+var _next_index := -1
 
 
 func _ready() -> void:
 	Controls.ensure()
-	data = LevelData.new()
 	_build()
-	if data.error != "":
-		_status.text = data.error
-		return
+
+
+func setup(level_data: LevelData, save_data) -> void:
+	data = level_data
+	save = save_data
+	_picker.visible = OS.has_feature("editor")
+	apply_language()
+
+
+## Re-label everything after a language change (or at start).
+func apply_language() -> void:
+	_back.text = "◀ " + Strings.t("back_to_list")
+	_undo.text = Strings.t("undo")
+	_restart.text = Strings.t("restart")
+	_ov_retry.text = Strings.t("retry")
+	_ov_list.text = Strings.t("back_to_list")
+	_picker.clear()
 	for i in data.levels.size():
 		var d: Dictionary = data.levels[i]
-		var ch := data.chapter_of(d)
-		_picker.add_item("%d · %s%s" % [data.chapter_number(ch), Strings.field(d, "name"), "  (Extra)" if d.get("extra", false) else ""], i)
-	load_level(0)
+		_picker.add_item("%d · %s%s" % [data.chapter_number(data.chapter_of(d)), Strings.field(d, "name"), "  (Extra)" if d.get("extra", false) else ""], i)
+	if index >= 0:
+		_picker.select(index)
+		_label_level()
+		_refresh()
 
 
 # ---------- levels ----------
@@ -87,11 +114,29 @@ func load_level(i: int) -> void:
 	cursor = cy * board.w + cx
 	_cursor_w = board.w
 	_picker.select(i)
+	view.show_sight = save.sight
+	_label_level()
+	_refresh()
+	level_opened.emit()
+
+
+func _label_level() -> void:
 	var ch := data.chapter_of(def)
 	_chapter_label.text = Strings.t("chapter_label", {"n": data.chapter_number(ch), "name": Strings.field(ch, "name")})
 	_name_label.text = Strings.field(def, "name")
 	_note_label.text = Strings.field(def, "note")
-	_refresh()
+
+
+## The previous / next painting that is open, in list order (LB/RB, Page Up/Down).
+func step_level(dir: int) -> void:
+	var i := index
+	for n in data.levels.size():
+		i += dir
+		if i < 0 or i >= data.levels.size():
+			return
+		if not data.is_locked(data.levels[i], save):
+			load_level(i)
+			return
 
 
 func undo() -> void:
@@ -138,20 +183,32 @@ func _win() -> void:
 	won = true
 	var strikes := history.size()
 	var par: int = int(def.get("par", -1))
+	var ch := data.chapter_of(def)
+	var chapter_was_done := data.chapter_cleared(ch, save)
+	save.record(def.id, strikes)
 	_ov_title.text = Strings.t("restored")
-	_ov_stars.text = _stars(strikes, par)
+	_ov_stars.text = stars(strikes, par)
 	_ov_result.text = Strings.t("result", {"s": strikes, "p": par if par >= 0 else "?"})
-	var next := data.next_main(index)
-	_ov_next.visible = next >= 0
-	if next >= 0:
-		var next_ch := data.chapter_of(data.levels[next])
-		_ov_next.text = Strings.t("next_chapter", {"name": Strings.field(next_ch, "name")}) if next_ch != data.chapter_of(def) else Strings.t("next")
+	var chapter_just_done: bool = not def.get("extra", false) and not chapter_was_done and data.chapter_cleared(ch, save)
+	_ov_chapter.visible = chapter_just_done
+	_ov_chapter.text = Strings.t("chapter_done", {"n": data.chapter_number(ch), "name": Strings.field(ch, "name")})
+	var extras := data.extras_of(def)
+	_extra_index = data.index_of(extras[0].id) if not extras.is_empty() else -1
+	_ov_extra.visible = _extra_index >= 0
+	if _extra_index >= 0:
+		_ov_extra.text = "%s: %s" % [Strings.t("extra"), Strings.field(extras[0], "name")]
+	_next_index = data.next_main(index)
+	_ov_next.visible = _next_index >= 0
+	_ov_list.visible = _next_index < 0 # the last painting (of the demo): back to the list
+	if _next_index >= 0:
+		var next_ch := data.chapter_of(data.levels[_next_index])
+		_ov_next.text = Strings.t("next_chapter", {"name": Strings.field(next_ch, "name")}) if next_ch != ch else Strings.t("next")
 	_overlay.show()
-	(_ov_next if _ov_next.visible else _ov_retry).grab_focus()
+	(_ov_next if _ov_next.visible else _ov_list).grab_focus()
 
 
 ## The prototype's rule: par or better 3 stars, one over 2, more 1.
-static func _stars(strikes: int, par: int) -> String:
+static func stars(strikes: int, par: int) -> String:
 	if par < 0:
 		return ""
 	return "★★★" if strikes <= par else ("★★☆" if strikes <= par + 1 else "★☆☆")
@@ -167,7 +224,6 @@ func _refresh() -> void:
 		Strings.t("par"), str(int(def.par)) if def.has("par") else "–",
 		Strings.t("layers_left"), Rules.layers_left(board, hp)]
 	_status.text = ""
-	_status.add_theme_color_override("font_color", BAD)
 	if won:
 		return
 	if Rules.is_ruined(board, hp):
@@ -195,6 +251,8 @@ func _hide_overlay() -> void:
 # ---------- input ----------
 
 func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		return
 	# the mouse or a touch takes over from the cursor (a tap arrives as a click)
 	if board != null and cursor_active and (event is InputEventMouseButton or (event is InputEventMouseMotion and event.relative.length() > 2.0)):
 		cursor_active = false
@@ -202,7 +260,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if board == null or not event.is_pressed() or event.is_echo():
+	if board == null or not is_visible_in_tree() or not event.is_pressed() or event.is_echo():
 		return
 	var from_pad := event is InputEventJoypadButton or event is InputEventJoypadMotion
 	var handled := true
@@ -211,9 +269,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action("restart"):
 		restart()
 	elif event.is_action("prev_level"):
-		load_level(index - 1)
+		step_level(-1)
 	elif event.is_action("next_level"):
-		load_level(index + 1)
+		step_level(1)
+	elif event.is_action("menu"):
+		back_requested.emit()
 	elif event.is_action("strike") and not _overlay.visible:
 		if cursor_active:
 			_on_cell_pressed(cursor)
@@ -242,7 +302,7 @@ func _show_cursor(from_pad: bool) -> bool:
 
 func _process(delta: float) -> void:
 	_clock += delta
-	if board == null or _overlay.visible:
+	if board == null or not is_visible_in_tree() or _overlay.visible:
 		_dir = Vector2i.ZERO
 		return # on the result card, Godot's own focus moves between its buttons
 	var d := Controls.held_direction()
@@ -295,14 +355,14 @@ func _button(text: String, on_press: Callable) -> Button:
 
 
 func _build() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 24)
 	add_child(margin)
@@ -311,7 +371,11 @@ func _build() -> void:
 	margin.add_child(col)
 
 	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 16)
 	col.add_child(header)
+	_back = _button("◀", func(): back_requested.emit())
+	_back.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	header.add_child(_back)
 	var titles := VBoxContainer.new()
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(titles)
@@ -321,16 +385,12 @@ func _build() -> void:
 	_note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for l in [_chapter_label, _name_label, _note_label]:
 		titles.add_child(l)
-	var nav := HBoxContainer.new()
-	nav.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	header.add_child(nav)
-	nav.add_child(_button("◀", func(): load_level(index - 1)))
 	_picker = OptionButton.new()
 	_picker.focus_mode = Control.FOCUS_NONE
-	_picker.custom_minimum_size.x = 280
+	_picker.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_picker.custom_minimum_size.x = 260
 	_picker.item_selected.connect(func(i): load_level(_picker.get_item_id(i)))
-	nav.add_child(_picker)
-	nav.add_child(_button("▶", func(): load_level(index + 1)))
+	header.add_child(_picker)
 
 	view = BoardView.new()
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -346,21 +406,23 @@ func _build() -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footer.add_child(_status)
-	footer.add_child(_button(Strings.t("undo"), undo))
-	footer.add_child(_button(Strings.t("restart"), restart))
-	_keys = _label(13, MUTED, Strings.t("keys"))
+	_undo = _button("", undo)
+	_restart = _button("", restart)
+	footer.add_child(_undo)
+	footer.add_child(_restart)
+	_keys = _label(13, MUTED)
 	col.add_child(_keys)
 
 	_overlay = Control.new()
-	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_overlay)
 	var shade := ColorRect.new()
 	shade.color = Color(0, 0, 0, 0.55)
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay.add_child(shade)
 	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay.add_child(center)
 	var card := PanelContainer.new()
 	var style := StyleBoxFlat.new()
@@ -377,16 +439,19 @@ func _build() -> void:
 	_ov_title = _label(30, INK)
 	_ov_stars = _label(40, GOLD)
 	_ov_result = _label(18, MUTED)
-	for l in [_ov_title, _ov_stars, _ov_result]:
+	_ov_chapter = _label(17, GOLD)
+	for l in [_ov_title, _ov_stars, _ov_result, _ov_chapter]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lines.add_child(l)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 12)
 	lines.add_child(buttons)
-	_ov_retry = _button(Strings.t("retry"), restart)
-	_ov_next = _button(Strings.t("next"), func(): load_level(data.next_main(index)))
-	for b in [_ov_retry, _ov_next]:
+	_ov_retry = _button("", restart)
+	_ov_extra = _button("", func(): load_level(_extra_index))
+	_ov_next = _button("", func(): load_level(_next_index))
+	_ov_list = _button("", func(): back_requested.emit())
+	for b in [_ov_retry, _ov_extra, _ov_next, _ov_list]:
 		b.focus_mode = Control.FOCUS_ALL # D-pad / arrows move between them, A / Enter presses
 		buttons.add_child(b)
 	_overlay.hide()

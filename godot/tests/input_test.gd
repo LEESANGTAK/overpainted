@@ -6,6 +6,8 @@ extends SceneTree
 ##   - touch only: taps on the cells (Godot turns them into clicks)
 ##   godot --headless --path godot --script res://tests/input_test.gd
 
+const SaveData := preload("res://scripts/game/save_data.gd")
+
 const Solver := preload("res://scripts/core/solver.gd")
 
 var _failures := 0
@@ -82,8 +84,11 @@ func _pad_to(c: int) -> void:
 
 
 func _run() -> void:
-	play = load("res://scenes/main.tscn").instantiate()
-	root.add_child(play)
+	SaveData.path_override = "user://test_save.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveData.path_override))
+	var game: Control = load("res://scenes/main.tscn").instantiate()
+	root.add_child(game)
+	play = game.play
 	await _frames()
 	var demo: Array = play.data.demo
 	var pad_levels := 0

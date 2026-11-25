@@ -19,5 +19,5 @@ const quick = process.argv.includes('quick');
 if (quick) args.push('--', 'quick');
 if (run(godot, args) !== 0) process.exit(1);
 if (quick) process.exit(0);
-for (const test of ['play_test', 'input_test'])
+for (const test of ['play_test', 'input_test', 'frame_test'])
   if (run(godot, ['--headless', '--path', 'godot', '--script', `res://tests/${test}.gd`]) !== 0) process.exit(1);

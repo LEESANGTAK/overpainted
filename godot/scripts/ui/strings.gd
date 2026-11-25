@@ -1,8 +1,14 @@
 extends RefCounted
-## Screen text in Korean and English (the prototype's prototype/i18n.js wording).
-## Stage 4 of the port moves this to Godot translation files; until then, Strings.t("key", {n = 1}).
+## Screen text in Korean and English (the prototype's prototype/i18n.js wording): Strings.t("key", {n = 1}).
+## Kept as a plain table rather than Godot translation files: two languages, a few dozen lines, and
+## level names and notes come from the levels file anyway.
 
 static var lang := "ko"
+
+
+## The language to start in when the player has not chosen one: Korean on a Korean system, else English.
+static func system_lang() -> String:
+	return "ko" if OS.get_locale_language() == "ko" else "en"
 
 const STR := {
 	"ko": {
@@ -14,8 +20,14 @@ const STR := {
 		"next_chapter": "다음 장: {name}",
 		"dead_end": "물감이 굳었습니다. 모든 그림은 복원할 수 있습니다 — 실수는 더 앞에 있을지도 모릅니다.",
 		"ruined": "원본이 상했습니다. 되돌리세요.",
-		"keys": "방향키 커서 · Space 두드리기 · Z 되돌리기 · R 처음부터 · PgUp/PgDn 그림",
-		"keys_pad": "십자키 이동 · A 두드리기 · B 되돌리기 · View 처음부터 · LB/RB 그림",
+		"keys": "방향키 커서 · Space 두드리기 · Z 되돌리기 · R 처음부터 · PgUp/PgDn 그림 · Esc 목록",
+		"keys_pad": "십자키 이동 · A 두드리기 · B 되돌리기 · View 처음부터 · LB/RB 그림 · Menu 목록",
+		"title_sub": "덧칠 아래의 그림을 되찾는 복원가의 퍼즐",
+		"paintings": "그림들", "back_to_list": "그림 목록", "extra": "Extra", "locked": "잠김",
+		"unlock_hint": "{name}을(를) 복원하면 열립니다",
+		"chapter_done": "{n}장 「{name}」의 그림을 모두 복원했습니다.",
+		"lang_button": "English", "sight": "시선 미리 보기", "sound": "소리",
+		"select_keys": "방향키·십자키로 고르고 Enter·A로 엽니다",
 	},
 	"en": {
 		"strikes": "Strikes", "par": "Par", "layers_left": "Layers left",
@@ -26,8 +38,14 @@ const STR := {
 		"next_chapter": "Next chapter: {name}",
 		"dead_end": "The paint has set. Every painting can be restored — the mistake may lie further back.",
 		"ruined": "The original is damaged. Undo.",
-		"keys": "Arrows cursor · Space strike · Z undo · R restart · PgUp/PgDn paintings",
-		"keys_pad": "D-pad move · A strike · B undo · View restart · LB/RB painting",
+		"keys": "Arrows cursor · Space strike · Z undo · R restart · PgUp/PgDn paintings · Esc list",
+		"keys_pad": "D-pad move · A strike · B undo · View restart · LB/RB painting · Menu list",
+		"title_sub": "A restorer's puzzle: find the painting under the overpaint",
+		"paintings": "Paintings", "back_to_list": "Paintings", "extra": "Extra", "locked": "locked",
+		"unlock_hint": "Restore {name} to open this",
+		"chapter_done": "Chapter {n}, {name}: every painting restored.",
+		"lang_button": "한국어", "sight": "Show lines of sight", "sound": "Sound",
+		"select_keys": "Arrows or D-pad to choose, Enter or A to open",
 	},
 }
 

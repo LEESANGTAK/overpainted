@@ -2,6 +2,8 @@ extends SceneTree
 ## Screenshots of levels for a look at how tiles are drawn.
 ##   godot --path godot --script res://tests/shots.gd -- out=<folder> <level id> ...
 
+const SaveData := preload("res://scripts/game/save_data.gd")
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -14,8 +16,11 @@ func _run() -> void:
 			out = a.substr(4)
 		else:
 			ids.append(a)
-	var play: Control = load("res://scenes/main.tscn").instantiate()
-	root.add_child(play)
+	SaveData.path_override = "user://test_save.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveData.path_override))
+	var game: Control = load("res://scenes/main.tscn").instantiate()
+	root.add_child(game)
+	var play: Control = game.play
 	await process_frame
 	for id in ids:
 		for i in play.data.levels.size():

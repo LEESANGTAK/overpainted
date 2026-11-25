@@ -5,7 +5,8 @@ extends RefCounted
 ##   cursor_up/down/left/right  D-pad, arrow keys (the left stick is read directly: the stronger axis wins)
 ##   strike    A, Space, Enter        undo      B, Z           restart   View (Back), R
 ##   prev_level LB, Page Up           next_level RB, Page Down
-##   hint      Y, H (port stage 5)    sound     Menu (Start), M (stage 5)    tool  X, T (tools, later)
+##   menu      Menu (Start), Esc: back to the list of paintings
+##   hint      Y, H (port stage 5)    sound     M (stage 5; also in the settings)    tool  X, T (tools, later)
 
 const STICK_DEAD := 0.5        ## how far the stick must lean to count as a direction
 const REPEAT_DELAY := 0.26     ## a held direction steps again after this...
@@ -22,7 +23,8 @@ const ACTIONS := {
 	"prev_level": [KEY_PAGEUP, JOY_BUTTON_LEFT_SHOULDER],
 	"next_level": [KEY_PAGEDOWN, JOY_BUTTON_RIGHT_SHOULDER],
 	"hint": [KEY_H, JOY_BUTTON_Y],
-	"sound": [KEY_M, JOY_BUTTON_START],
+	"menu": [KEY_ESCAPE, JOY_BUTTON_START],
+	"sound": [KEY_M],
 	"tool": [KEY_T, JOY_BUTTON_X],
 }
 

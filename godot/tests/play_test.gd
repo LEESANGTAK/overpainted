@@ -4,6 +4,8 @@ extends SceneTree
 ##   godot --headless --path godot --script res://tests/play_test.gd
 ##   godot --path godot --script res://tests/play_test.gd -- shots=<folder>   (also saves screenshots)
 
+const SaveData := preload("res://scripts/game/save_data.gd")
+
 const Solver := preload("res://scripts/core/solver.gd")
 const Rules := preload("res://scripts/core/rules.gd")
 
@@ -24,8 +26,11 @@ func _run() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("shots="):
 			shots = a.substr(6)
-	var play: Control = load("res://scenes/main.tscn").instantiate()
-	root.add_child(play)
+	SaveData.path_override = "user://test_save.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveData.path_override))
+	var game: Control = load("res://scenes/main.tscn").instantiate()
+	root.add_child(game)
+	var play: Control = game.play
 	await process_frame
 	var played := 0
 	for i in play.data.levels.size():
