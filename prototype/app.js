@@ -1,4 +1,4 @@
-import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, toOrig, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft, isOriginal, isRuined, isWon, cellOf, retouchLeft, canRetouch, applyRetouch, splitLeft, canSplitTile, canSplit, applySplit, listToolMoves, paletteLeft, paletteMask, canPalette, applyPalette, addedPigments, isEmpty } from '../core/rules.js';
+import { parseLevel, probe, applyHits, isClear, listMoves, toRows, toUnder, toMix, toOrig, COLOR_CHARS, canTape, applyTape, tapeLeft, isTaped, layersLeft, isOriginal, isRuined, isWon, cellOf, retouchLeft, canRetouch, applyRetouch, splitLeft, canSplitTile, canSplit, applySplit, listToolMoves, paletteLeft, paletteMask, canPalette, applyPalette, paletteSources, addedPigments, isEmpty } from '../core/rules.js';
 import { analyze, findSolution, SearchLimit } from '../core/solver.js';
 import { baitReport, DEFAULT_WEIGHTS } from '../core/predict.js';
 import { isMuted, toggleMute, unlock, preload, setLost } from './mood.js';
@@ -232,16 +232,21 @@ function drawRays(cell, rays, hits, kind) {
     if (r.end >= 0) { ex = (r.end % b.w + .5 - dx * .5) * s; ey = ((r.end / b.w | 0) + .5 - dy * .5) * s; }
     else { ex = dx > 0 ? b.w * s : dx < 0 ? 0 : cx; ey = dy > 0 ? b.h * s : dy < 0 ? 0 : cy; }
     const isHit = hits.includes(r.tile);
-    const cls = kind === 'hover' ? 'hover' : isHit ? '' : 'miss';
+    const cls = kind === 'hover' ? 'hover' : isHit ? (kind === 'take' ? 'take' : '') : 'miss';
     out += `<line class="${cls}" x1="${cx}" y1="${cy}" x2="${ex}" y2="${ey}"/>`;
     if (kind !== 'hover' && isHit) {
       const tc = r.end;
-      out += `<circle class="hit" cx="${(tc % b.w + .5) * s}" cy="${((tc / b.w | 0) + .5) * s}" r="${s * .38}"/>`;
+      out += `<circle class="hit${kind === 'take' ? ' take' : ''}" cx="${(tc % b.w + .5) * s}" cy="${((tc / b.w | 0) + .5) * s}" r="${s * .38}"/>`;
     }
   }
   $('rays').innerHTML = out;
 }
 const clearRays = () => { $('rays').innerHTML = ''; };
+// With the palette in hand, a cell where it can be used shows the tiles its paint would come from.
+function showTake(c) {
+  if (S.mode !== 'play' || S.busy || S.won || c < 0 || !canPalette(S.board, S.hp, c)) return clearRays();
+  drawRays(c, probe(S.board, S.hp, c).rays, paletteSources(S.board, S.hp, c), 'take');
+}
 
 function stars(strikes, par) {
   if (par == null) return '';
@@ -466,7 +471,7 @@ function trayDown(e) {
     ghost.style.left = ev.clientX + 'px';
     ghost.style.top = ev.clientY - lift + 'px';
     const c = target(ev);
-    if (c !== over) mark(c);
+    if (c !== over) { mark(c); if (tool.kind === 'palette') showTake(c); }
     ghost.classList.toggle('ok', c >= 0);
   };
   const end = ev => {
@@ -478,6 +483,7 @@ function trayDown(e) {
     piece.classList.remove('lifted');
     const c = target(ev); // where it is let go, not where it last moved
     mark(-1);
+    if (tool.kind === 'palette') clearRays();
     if (c >= 0 && ev.type === 'pointerup') { if (tool.kind === 'tape') placeTape(c, 'drag'); else if (tool.kind === 'palette') placePalette(c, 'drag'); else placeRetouch(tool.i, c, 'drag'); }
   };
   window.addEventListener('pointermove', move);
@@ -539,17 +545,27 @@ function placeRetouch(i, c, via = 'click') {
   renderBoard();
   afterMove();
 }
-function placePalette(c, via = 'click') {
+async function placePalette(c, via = 'click') {
+  if (S.busy) return;
   S.tool = null;
-  if (!canPalette(S.board, S.hp, c)) { // only where exactly two pigments are seen
+  if (!canPalette(S.board, S.hp, c)) { // only where at least two tiles show exactly two pigments
     renderBoard(); updateHud();
     if (isEmpty(S.board, S.hp, c)) { $('status').textContent = t('paletteNo'); $('status').className = ''; }
     return;
   }
   S.hintCell = -1;
+  const m = paletteMask(S.board, S.hp, c), src = paletteSources(S.board, S.hp, c);
+  log('palette', { cell: c, colors: [...COLOR_CHARS].filter((_, k) => m & (1 << k)).join(''), taken: src.length, via: S.replaying ? undefined : via, replay: !!S.replaying || undefined });
+  // the paint is taken from the tiles the cell sees: they lift like a strike's, then the dab goes on
+  drawRays(c, probe(S.board, S.hp, c).rays, src, 'take');
+  S.busy = true;
+  const gen = S.gen;
+  for (const t of src) cellEl(cellOf(S.board, t))?.querySelector('.tile:not(.under)')?.classList.add(S.hp[t] >= 2 ? 'strip' : 'dissolve');
+  await sleep(280);
+  if (gen !== S.gen) return;
+  S.busy = false;
+  if (S.mode !== 'play') return;
   clearRays();
-  const m = paletteMask(S.board, S.hp, c);
-  log('palette', { cell: c, colors: [...COLOR_CHARS].filter((_, k) => m & (1 << k)).join(''), via: S.replaying ? undefined : via, replay: !!S.replaying || undefined });
   S.hist.push(S.hp);
   S.hp = applyPalette(S.board, S.hp, c);
   noteBlunder();
@@ -801,7 +817,7 @@ async function replaySolution() {
       if (S.mode !== 'play') return;
       if (st.tape) placeTape(st.cell);
       else if (st.retouch != null) placeRetouch(st.retouch, st.cell);
-      else if (st.palette) placePalette(st.cell);
+      else if (st.palette) await placePalette(st.cell);
       else if (st.split != null) doSplit(st.split, st.cell, st.color);
       else await strikeAt(st.cell);
       await sleep(380);
@@ -963,6 +979,7 @@ function renderCursor() {
   el.classList.toggle('taping', !!S.tool);
 }
 function padHover() { // the lines of sight from the cursor, as a mouse hover would show them
+  if (S.tool?.kind === 'palette') return showTake(S.cursor);
   if (S.busy || S.won || !$('hoverRays').checked) return clearRays();
   const r = probe(S.board, S.hp, S.cursor);
   if (r) drawRays(S.cursor, r.rays, r.hits, 'hover'); else clearRays();
@@ -1081,6 +1098,7 @@ function wire() {
     const c = +cell.dataset.c;
     if (S.mode === 'edit') { if (S.edit.painting) paintCell(c); return; }
     if (!window.matchMedia('(hover: hover)').matches) return;
+    if (S.tool?.kind === 'palette') return showTake(c);
     if (S.busy || S.won || !$('hoverRays').checked) return;
     const r = probe(S.board, S.hp, c);
     if (r) drawRays(c, r.rays, r.hits, 'hover'); else clearRays();

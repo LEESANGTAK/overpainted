@@ -39,9 +39,11 @@
 // then ordinary single-layer overpaint tiles.
 //
 // Palette (optional `palette: N`): up to N times, the player may mix a dab on an empty cell from
-// what that cell sees: if the tiles it would see (up/right/down/left, as a strike looks) show
-// exactly two pigments, a dab of those two pigments mixed is put there. It is overpaint (it has to
-// come off too) and pairs like a mixed tile, with either of its pigments.
+// what that cell sees: if it sees at least two tiles (up/right/down/left, as a strike looks) and
+// they show exactly two pigments, the paint is taken from them -- every seen tile loses one layer,
+// as if struck (so a double coat keeps its lower coat, an undercoat shows, and taking from original
+// paint ruins the painting) -- and a dab of those two pigments mixed is put on the cell. The dab is
+// overpaint (it has to come off too) and pairs like a mixed tile, with either of its pigments.
 //
 // Retouch dabs, split halves and palette dabs are ADDED tiles. They live in the state, one slot per cell, and
 // are identified by `board.offAdd + cell` wherever a tile index is expected (hits, maskOf, ...).
@@ -232,12 +234,18 @@ export function paletteLeft(board, hp) {
   return board.palette ? board.palette - hp[board.offPalette] : 0;
 }
 
+/** Tiles a palette dab on empty cell c takes its paint from (every tile the cell sees), sorted. */
+export function paletteSources(board, hp, c) {
+  const r = probe(board, hp, c);
+  return r ? r.rays.filter(ray => ray.tile >= 0).map(ray => ray.tile).sort((a, b) => a - b) : [];
+}
+
 /** Pigments a palette dab on empty cell c would mix (a bitmask of exactly two), or 0 if it cannot. */
 export function paletteMask(board, hp, c) {
-  const r = probe(board, hp, c);
-  if (!r) return 0;
+  const src = paletteSources(board, hp, c);
+  if (src.length < 2) return 0;
   let m = 0;
-  for (const ray of r.rays) if (ray.tile >= 0) m |= maskOf(board, hp, ray.tile);
+  for (const t of src) m |= maskOf(board, hp, t);
   let bits = 0;
   for (let k = m; k; k &= k - 1) bits++;
   return bits === 2 ? m : 0;
@@ -248,10 +256,10 @@ export function canPalette(board, hp, c) {
   return paletteLeft(board, hp) > 0 && paletteMask(board, hp, c) !== 0;
 }
 
-/** New state with a palette dab mixed on cell c. */
+/** New state: paint taken from the tiles cell c sees (one layer each), a palette dab mixed on c. */
 export function applyPalette(board, hp, c) {
   const m = paletteMask(board, hp, c);
-  const n = hp.slice();
+  const n = applyHits(hp, paletteSources(board, hp, c));
   n[board.offAdd + c] = 1; n[board.offCol + c] = m; n[board.offPalette]++;
   return n;
 }

@@ -1,7 +1,7 @@
 // Rules + solver checks.   node tools/test.mjs
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, toOrig, canTape, applyTape, tapeLeft, isTaped, isRuined, isWon, isOriginal, paintGone, listToolMoves, applyToolMove, applyRetouch, canRetouch, retouchLeft, applySplit, canSplit, splitLeft, tileOn, maskOf, layersLeft, canPalette, applyPalette, paletteMask, paletteLeft } from '../core/rules.js';
+import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, toOrig, canTape, applyTape, tapeLeft, isTaped, isRuined, isWon, isOriginal, paintGone, listToolMoves, applyToolMove, applyRetouch, canRetouch, retouchLeft, applySplit, canSplit, splitLeft, tileOn, maskOf, layersLeft, canPalette, applyPalette, paletteMask, paletteLeft, paletteSources } from '../core/rules.js';
 import { analyze } from '../core/solver.js';
 import { matchTrap, checkTraps } from '../core/traps.js';
 
@@ -290,19 +290,32 @@ test('split: a mixed tile becomes two, one pigment moves to an empty neighbour',
   assert.ok(analyze(b).solvable === analyze(b).solvable); // (analysed without error)
 });
 
-test('palette: a dab mixed from exactly the two pigments its cell sees', () => {
-  // A . . B . B : from (2,0) the cell sees red (left) and blue (right) -> a red-blue dab there
+test('palette: takes paint from the two pigments its cell sees and mixes a dab there', () => {
+  // A . . B . B : from (2,0) the cell sees red (left) and blue (right): both lose their layer, a red-blue dab goes on (2,0)
   const rows = ['A..B.B'];
   const b = parseLevel({ rows, palette: 1 });
   assert.equal(paletteMask(b, b.initHp, 2), 0b11);
   assert.equal(paletteMask(b, b.initHp, 4), 0, 'sees only blue');
+  assert.deepEqual(paletteSources(b, b.initHp, 2), [tileOn(b, b.initHp, 0), tileOn(b, b.initHp, 3)]);
   const hp = applyPalette(b, b.initHp, 2);
   assert.equal(maskOf(b, hp, tileOn(b, hp, 2)), 0b11);
-  assert.ok(!canPalette(b, hp, 1) && paletteLeft(b, hp) === 0);
-  // one red and two blues: the mixed dab partners the lone red, then the blues pair
-  const a = analyze(b);
-  assert.ok(a.solvable && a.minStrikes === 3 && a.solution[0].palette && a.solution[0].cell === 2);
+  assert.equal(tileOn(b, hp, 0), -1, 'red was taken');
+  assert.equal(tileOn(b, hp, 3), -1, 'blue was taken');
+  assert.equal(layersLeft(b, hp), 2, 'the dab and the last blue');
+  assert.ok(paletteLeft(b, hp) === 0 && !canPalette(b, hp, 4));
+  // one red, two blues: mix the red with one blue, then the dab pairs the other blue
+  const an = analyze(b);
+  assert.ok(an.solvable && an.minStrikes === 2 && an.solution[0].palette && [1, 2].includes(an.solution[0].cell));
   assert.ok(!analyze(parseLevel({ rows })).solvable);
+  // a single seen tile is not enough, even a mixed one
+  const m = parseLevel({ rows: ['A..'], mix: ['B..'], palette: 1 });
+  assert.equal(paletteMask(m, m.initHp, 1), 0);
+  // a double coat gives one layer; taking from original paint ruins the painting
+  const d = parseLevel({ rows: ['a.B'], palette: 1 });
+  const dh = applyPalette(d, d.initHp, 1);
+  assert.equal(dh[tileOn(d, d.initHp, 0)], 1, 'lower coat stays');
+  const o = parseLevel({ rows: ['A.B'], orig: ['o..'], palette: 1 });
+  assert.ok(isRuined(o, applyPalette(o, o.initHp, 1)));
 });
 
-console.log(`\n${n} tests passed`);
+
