@@ -21,7 +21,8 @@ const MAX_CELL := 104.0
 var board: Rules.Board
 var hp: PackedByteArray
 var interactive := true   ## false while a strike plays, after a win, or on a ruined painting
-var show_sight := true    ## preview the lines of sight under the pointer
+var show_sight := true    ## preview the lines of sight under the pointer (or the cursor)
+var cursor := -1          ## the keyboard / gamepad cursor's cell, -1 when the mouse or touch is in use
 
 var _cell := 64.0
 var _origin := Vector2.ZERO
@@ -86,6 +87,12 @@ func _notification(what: int) -> void:
 		queue_redraw()
 
 
+func set_cursor(c: int) -> void:
+	if c != cursor:
+		cursor = c
+		queue_redraw()
+
+
 ## Play the lift of `hits` (struck from `cell`); resolves when done. The caller applies the state after.
 func play_lift(cell: int, hits: Array) -> void:
 	_strike_cell = cell
@@ -129,6 +136,9 @@ func _draw() -> void:
 		if t >= 0:
 			_draw_tile(c, t)
 	_draw_sight()
+	if cursor >= 0:
+		var r := Rect2(_origin + Vector2(cursor % board.w, cursor / board.w) * _cell, Vector2(_cell, _cell)).grow(-3)
+		draw_rect(r, Color(RAY, 0.9 if interactive else 0.35), false, 3.0)
 	if _fizzle_cell >= 0:
 		draw_circle(center_of(_fizzle_cell), _cell * 0.3, Color(0.85, 0.3, 0.25, 0.5 * _fizzle))
 
@@ -188,9 +198,9 @@ func _draw_sight() -> void:
 	var from := _strike_cell
 	var lifted := _lifting.keys()
 	if from < 0:
-		if not (interactive and show_sight) or _hover < 0:
+		from = cursor if cursor >= 0 else _hover
+		if not (interactive and show_sight) or from < 0:
 			return
-		from = _hover
 	var r = Rules.probe(board, hp, from)
 	if r == null:
 		return

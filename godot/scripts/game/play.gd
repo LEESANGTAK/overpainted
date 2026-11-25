@@ -1,12 +1,15 @@
 extends Control
-## Grey-box play screen (port stage 2): one painting at a time — strike, undo, restart, win, stars.
+## Grey-box play screen (port stages 2-3): one painting at a time — strike, undo, restart, win, stars.
 ## The screen is built in code; art and staging come later. A developer picker opens any level.
-## Not here yet: masking tape and palette controls (not in the demo chapters), saving, sound.
+## Input: mouse, touch (taps arrive as clicks), keyboard and gamepad (a cursor on the board; see
+## scripts/input/controls.gd). Not here yet: masking tape and palette controls (not in the demo
+## chapters), saving, sound.
 
 const Rules := preload("res://scripts/core/rules.gd")
 const LevelData := preload("res://scripts/game/level_data.gd")
 const BoardView := preload("res://scripts/game/board_view.gd")
 const Strings := preload("res://scripts/ui/strings.gd")
+const Controls := preload("res://scripts/input/controls.gd")
 
 const BG := Color("#1b170f")
 const INK := Color("#f4e9c8")
@@ -23,6 +26,15 @@ var history: Array[PackedByteArray] = []
 var won := false
 var busy := false           ## a strike is playing
 
+## Keyboard / gamepad cursor. Shown once a key or pad button is used, hidden again by the mouse or a touch.
+var cursor_active := false
+var cursor := 0
+var pad_last := false       ## the last cursor input came from a gamepad (for the hints line)
+var _dir := Vector2i.ZERO   ## direction held at the last frame
+var _repeat_at := 0.0       ## when a held direction steps again (seconds of play time)
+var _clock := 0.0
+var _cursor_w := 0          ## board width the cursor index was made for
+
 var view: BoardView
 var _chapter_label: Label
 var _name_label: Label
@@ -35,9 +47,12 @@ var _ov_title: Label
 var _ov_stars: Label
 var _ov_result: Label
 var _ov_next: Button
+var _ov_retry: Button
+var _keys: Label
 
 
 func _ready() -> void:
+	Controls.ensure()
 	data = LevelData.new()
 	_build()
 	if data.error != "":
@@ -65,7 +80,12 @@ func load_level(i: int) -> void:
 	history.clear()
 	won = false
 	busy = false
-	_overlay.hide()
+	_hide_overlay()
+	# keep the cursor's column and row where they fit, else start in the middle
+	var cx := mini(cursor % maxi(1, _cursor_w), board.w - 1) if _cursor_w > 0 else board.w / 2
+	var cy := mini(cursor / maxi(1, _cursor_w), board.h - 1) if _cursor_w > 0 else board.h / 2
+	cursor = cy * board.w + cx
+	_cursor_w = board.w
 	_picker.select(i)
 	var ch := data.chapter_of(def)
 	_chapter_label.text = Strings.t("chapter_label", {"n": data.chapter_number(ch), "name": Strings.field(ch, "name")})
@@ -79,7 +99,7 @@ func undo() -> void:
 		return
 	hp = history.pop_back()
 	won = false
-	_overlay.hide()
+	_hide_overlay()
 	_refresh()
 
 
@@ -127,8 +147,7 @@ func _win() -> void:
 		var next_ch := data.chapter_of(data.levels[next])
 		_ov_next.text = Strings.t("next_chapter", {"name": Strings.field(next_ch, "name")}) if next_ch != data.chapter_of(def) else Strings.t("next")
 	_overlay.show()
-	if _ov_next.visible:
-		_ov_next.grab_focus()
+	(_ov_next if _ov_next.visible else _ov_retry).grab_focus()
 
 
 ## The prototype's rule: par or better 3 stars, one over 2, more 1.
@@ -141,6 +160,8 @@ static func _stars(strikes: int, par: int) -> String:
 func _refresh() -> void:
 	view.show_state(board, hp)
 	view.interactive = not won and not busy and not Rules.is_ruined(board, hp)
+	view.set_cursor(cursor if cursor_active and not won else -1)
+	_keys.text = Strings.t("keys_pad" if pad_last else "keys")
 	_hud.text = "%s %d   ·   %s %s   ·   %s %d" % [
 		Strings.t("strikes"), history.size(),
 		Strings.t("par"), str(int(def.par)) if def.has("par") else "–",
@@ -163,16 +184,95 @@ func _tool_can_make_a_strike() -> bool:
 	return false
 
 
+func _hide_overlay() -> void:
+	if _overlay.visible:
+		var f := get_viewport().gui_get_focus_owner()
+		if f:
+			f.release_focus()
+	_overlay.hide()
+
+
+# ---------- input ----------
+
+func _input(event: InputEvent) -> void:
+	# the mouse or a touch takes over from the cursor (a tap arrives as a click)
+	if board != null and cursor_active and (event is InputEventMouseButton or (event is InputEventMouseMotion and event.relative.length() > 2.0)):
+		cursor_active = false
+		_refresh()
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.echo):
+	if board == null or not event.is_pressed() or event.is_echo():
 		return
-	match event.keycode:
-		KEY_Z: undo()
-		KEY_R: restart()
-		KEY_PAGEUP: load_level(index - 1)
-		KEY_PAGEDOWN: load_level(index + 1)
-		_: return
-	get_viewport().set_input_as_handled()
+	var from_pad := event is InputEventJoypadButton or event is InputEventJoypadMotion
+	var handled := true
+	if event.is_action("undo"):
+		undo()
+	elif event.is_action("restart"):
+		restart()
+	elif event.is_action("prev_level"):
+		load_level(index - 1)
+	elif event.is_action("next_level"):
+		load_level(index + 1)
+	elif event.is_action("strike") and not _overlay.visible:
+		if cursor_active:
+			_on_cell_pressed(cursor)
+		_show_cursor(from_pad)
+	elif _is_cursor_event(event):
+		pass # moves are read every frame in _process (held directions repeat)
+	else:
+		handled = false
+	if handled:
+		get_viewport().set_input_as_handled()
+
+
+func _is_cursor_event(event: InputEvent) -> bool:
+	return event.is_action("cursor_up") or event.is_action("cursor_down") or event.is_action("cursor_left") or event.is_action("cursor_right")
+
+
+## Show the cursor (the first key or button press only shows it, where it was).
+func _show_cursor(from_pad: bool) -> bool:
+	pad_last = from_pad
+	if cursor_active:
+		return false
+	cursor_active = true
+	_refresh()
+	return true
+
+
+func _process(delta: float) -> void:
+	_clock += delta
+	if board == null or _overlay.visible:
+		_dir = Vector2i.ZERO
+		return # on the result card, Godot's own focus moves between its buttons
+	var d := Controls.held_direction()
+	if d == Vector2i.ZERO:
+		_dir = d
+		return
+	var step := false
+	if d != _dir:
+		step = true
+		_repeat_at = _clock + Controls.REPEAT_DELAY
+	elif _clock >= _repeat_at:
+		step = true
+		_repeat_at = _clock + Controls.REPEAT_EVERY
+	_dir = d
+	if not step:
+		return
+	var from_pad := Input.get_connected_joypads().size() > 0 and not _arrow_keys_down()
+	if _show_cursor(from_pad):
+		return
+	var x := clampi(cursor % board.w + d.x, 0, board.w - 1)
+	var y := clampi(cursor / board.w + d.y, 0, board.h - 1)
+	cursor = y * board.w + x
+	_refresh()
+
+
+func _arrow_keys_down() -> bool:
+	for k in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+		if Input.is_physical_key_pressed(k):
+			return true
+	return false
 
 
 # ---------- screen ----------
@@ -248,7 +348,8 @@ func _build() -> void:
 	footer.add_child(_status)
 	footer.add_child(_button(Strings.t("undo"), undo))
 	footer.add_child(_button(Strings.t("restart"), restart))
-	col.add_child(_label(13, MUTED, Strings.t("keys")))
+	_keys = _label(13, MUTED, Strings.t("keys"))
+	col.add_child(_keys)
 
 	_overlay = Control.new()
 	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -283,8 +384,9 @@ func _build() -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 12)
 	lines.add_child(buttons)
-	buttons.add_child(_button(Strings.t("retry"), restart))
+	_ov_retry = _button(Strings.t("retry"), restart)
 	_ov_next = _button(Strings.t("next"), func(): load_level(data.next_main(index)))
-	_ov_next.focus_mode = Control.FOCUS_ALL
-	buttons.add_child(_ov_next)
+	for b in [_ov_retry, _ov_next]:
+		b.focus_mode = Control.FOCUS_ALL # D-pad / arrows move between them, A / Enter presses
+		buttons.add_child(b)
 	_overlay.hide()

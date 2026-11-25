@@ -14,7 +14,8 @@ const STR := {
 		"next_chapter": "다음 장: {name}",
 		"dead_end": "물감이 굳었습니다. 모든 그림은 복원할 수 있습니다 — 실수는 더 앞에 있을지도 모릅니다.",
 		"ruined": "원본이 상했습니다. 되돌리세요.",
-		"keys": "Z 되돌리기 · R 처음부터 · PgUp/PgDn 그림",
+		"keys": "방향키 커서 · Space 두드리기 · Z 되돌리기 · R 처음부터 · PgUp/PgDn 그림",
+		"keys_pad": "십자키 이동 · A 두드리기 · B 되돌리기 · View 처음부터 · LB/RB 그림",
 	},
 	"en": {
 		"strikes": "Strikes", "par": "Par", "layers_left": "Layers left",
@@ -25,7 +26,8 @@ const STR := {
 		"next_chapter": "Next chapter: {name}",
 		"dead_end": "The paint has set. Every painting can be restored — the mistake may lie further back.",
 		"ruined": "The original is damaged. Undo.",
-		"keys": "Z undo · R restart · PgUp/PgDn paintings",
+		"keys": "Arrows cursor · Space strike · Z undo · R restart · PgUp/PgDn paintings",
+		"keys_pad": "D-pad move · A strike · B undo · View restart · LB/RB painting",
 	},
 }
 
