@@ -1,0 +1,81 @@
+# The playtest site on GitHub Pages: the web prototype as before (https://leesangtak.github.io/overpainted/)
+# plus the Godot game's web build at /play/ (a demo + playtest build: chapters 1-5, records to the sheet).
+#
+# Needs, once: repository Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
+# (before that, the old "Deploy from a branch" keeps serving the repository and this workflow's deploy
+# step fails harmlessly).
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+  GODOT_RELEASE: https://github.com/godotengine/godot/releases/download/4.7.2-stable
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Godot and export templates (cached)
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-${{ env.GODOT_VERSION }}-web
+
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable /tmp/dl
+          curl -sSL -o /tmp/dl/SHA512-SUMS.txt "$GODOT_RELEASE/SHA512-SUMS.txt"
+          curl -sSL -o /tmp/dl/godot.zip "$GODOT_RELEASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -sSL -o /tmp/dl/templates.tpz "$GODOT_RELEASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          cd /tmp/dl
+          grep " Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" SHA512-SUMS.txt | awk '{print $1"  godot.zip"}' | sha512sum -c -
+          grep " Godot_v${GODOT_VERSION}-stable_export_templates.tpz" SHA512-SUMS.txt | awk '{print $1"  templates.tpz"}' | sha512sum -c -
+          unzip -q godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          # only the web templates are needed here
+          unzip -q -j templates.tpz 'templates/web_*' 'templates/version.txt' -d ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+
+      - name: Export the web build
+        run: |
+          ~/godot/godot --headless --path godot --import || true
+          mkdir -p _site/play
+          ~/godot/godot --headless --path godot --export-release Web "$GITHUB_WORKSPACE/_site/play/index.html"
+          test -s _site/play/index.wasm
+
+      - name: Site = the repository (as served before) + the Godot build at /play/
+        run: |
+          rsync -a --exclude '.git' --exclude '.github' --exclude '.claude' --exclude 'godot' --exclude '_site' ./ _site/
+          ls _site _site/play
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

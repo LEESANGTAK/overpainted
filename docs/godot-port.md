@@ -120,6 +120,17 @@
 - 테스터 이름 받기, 첫 안내.
 - 웹 빌드를 GitHub Pages에 올린다. 프로토타입 링크와 주소를 나눌지 정한다 (예: `/overpainted/` 는 Godot, `/overpainted/prototype/` 은 그대로).
 - **끝:** 링크 하나로 테스트하고, 기록이 시트에 쌓이고, 분석 도구가 읽는다.
+- **진행 (2026-11-26):**
+  - 기록 (`godot/scripts/net/playlog.gd`): 프로토타입과 같은 이벤트와 같은 필드 (session_start, level_start, strike, undo, restart, hint, win, leave, mood, chapter_clear, tester, pad, away/back, session_end). session_start에 `engine: "godot"`, 플랫폼, 기기 id. 2초마다 같은 시트 수집기로 보낸다. 웹에서는 탭이 닫힐 때 남은 것을 beacon으로, PC에서는 창을 닫을 때 마지막 묶음을 최대 3초 기다려 보낸다.
+  - 처음부터 하기는 `restart`로만 남긴다 (`level_start`를 다시 남기면 분석 도구가 새 방문으로 센다).
+  - 내보내기 설정에 `playtest` 표시를 더했다 (`demo,playtest`). 이 표시가 있는 빌드만 기록한다. 에디터에서 돌리면 기록하지 않는다. Steam 출시 빌드에서는 `playtest`를 뺀다.
+  - 첫 안내 카드 (`welcome.gd`): 프로토타입의 문구, 이름은 꼭 넣어야 시작, 저장 파일에 기억. 웹 링크에 `?t=이름`을 붙이면 미리 채운다. 목록 화면에 "● 녹화 · 이름".
+- 확인: `godot/tests/playlog_test.gd`가 짧은 세션(첫 안내와 이름, 헛친 타격, 되돌리기, 처음부터, 힌트, 이김, 그만두기)을 로컬 개발 서버로 보내고, `tools/playtest.mjs`가 그 세션을 프로토타입 기록과 똑같이 읽는다. `npm run test:godot`가 스스로 개발 서버를 띄워 확인하고, 자기 테스트 기록은 세션 id로 지우고, 디자이너의 `playtests/report.json`은 되돌려 둔다.
+- **웹에 올리기 (2026-11-26, 디자이너: GitHub Actions):** `.github/workflows/pages.yml`이 main에 푸시할 때마다 Godot 4.7.2로 웹 빌드를 만들어, 지금처럼 저장소 전체(프로토타입 링크 그대로) + `/play/`의 Godot판을 Pages에 올린다. Godot와 템플릿은 공식 SHA512로 확인하고 캐시한다. **한 번 필요한 설정:** 저장소 Settings → Pages → Source를 "GitHub Actions"로. 바꾸면 Actions가 성공할 때까지 사이트가 비어 있을 수 있으니, 테스트가 없는 시간에 바꾸고 Actions 탭에서 "Pages"를 한 번 다시 돌린다.
+- 링크: 프로토타입 `https://leesangtak.github.io/overpainted/` (그대로), Godot판 `https://leesangtak.github.io/overpainted/play/` (`?t=이름` 가능).
+- 로컬(localhost)에서 연 웹 빌드는 프로토타입처럼 시트가 아니라 개발 서버로 기록한다 (`tools/serve.mjs` → `playtests/`). 브라우저에서 확인: 첫 안내와 `?t=` 이름, 1~5장만, 키보드로 한 판, 기록이 개발 서버에 도착하고 분석 도구가 읽음, 페이지를 떠날 때 beacon으로 session_end.
+- 브라우저 확인에서 버그 하나를 찾아 고쳤다: 키를 아주 짧게 누르면(한 프레임 안에 눌렀다 뗌) 커서가 움직이지 않았다. 이제 누르는 순간 한 칸 가고, 누르고 있을 때만 반복한다. 테스트를 더했다.
+- Steam Deck에서는 이름 칸에 글을 넣으려면 Steam 화면 키보드(Steam + X)가 필요하다.
 
 ### 7. 데모 완성도 (L, 별도 계획)
 여기부터는 이식이 아니라 새 작업이다. 이식이 끝난 뒤 따로 계획을 세운다.

@@ -132,6 +132,22 @@ func _run() -> void:
 	if play.index != at:
 		_fail("RB then LB did not come back to the same painting")
 
+	# ---- a quick key tap (pressed and released within one frame) still moves the cursor ----
+	play.load_level(0)
+	await _frames()
+	play.cursor_active = true
+	var from: int = play.cursor
+	var tap := InputEventKey.new()
+	tap.physical_keycode = KEY_RIGHT
+	tap.pressed = true
+	_send(tap)
+	var tap_up := tap.duplicate()
+	tap_up.pressed = false
+	_send(tap_up)
+	await _frames()
+	if play.cursor != from + 1:
+		_fail("a quick key tap did not move the cursor (%d -> %d)" % [from, play.cursor])
+
 	# ---- touch only: taps on the cells ----
 	for i in play.data.levels.size():
 		var def: Dictionary = play.data.levels[i]

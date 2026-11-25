@@ -15,6 +15,7 @@ signal back_requested   ## the player wants the list of paintings
 signal level_opened     ## a painting was opened (from the result card, LB/RB, ...)
 signal mood_changed(lost: bool)   ## the room turns (true) or comes back (false)
 signal sound_toggled    ## the player pressed the sound key
+signal logged(type: String, data: Dictionary)   ## a playtest event (game.gd hands it to playlog.gd)
 
 const Rules := preload("res://scripts/core/rules.gd")
 const LevelData := preload("res://scripts/game/level_data.gd")
@@ -113,9 +114,13 @@ func apply_language() -> void:
 
 # ---------- levels ----------
 
-func load_level(i: int) -> void:
+func load_level(i: int, restarting := false) -> void:
 	if i < 0 or i >= data.levels.size():
 		return
+	if restarting:
+		logged.emit("restart", {"strikes": history.size(), "wasWon": won})
+	else:
+		leave()
 	index = i
 	def = data.levels[i]
 	board = Rules.parse_level(def)
@@ -140,7 +145,24 @@ func load_level(i: int) -> void:
 	view.show_sight = save.sight
 	_label_level()
 	_refresh()
+	if not restarting:
+		logged.emit("level_start", _level_start_event())
 	level_opened.emit()
+
+
+## The prototype's level_start event (the analysis tool rebuilds the board from it).
+func _level_start_event() -> Dictionary:
+	var e := {"chapter": def.get("chapter"), "rows": def.rows, "par": def.get("par"), "dev": false}
+	for k in ["under", "mix", "orig", "tape", "palette"]:
+		if def.has(k):
+			e[k] = def[k]
+	return e
+
+
+## Leaving the painting unfinished (for another one or the list): the playtest log notes it.
+func leave() -> void:
+	if index >= 0 and not won and board != null:
+		logged.emit("leave", {"strikes": history.size()})
 
 
 func _label_level() -> void:
@@ -165,6 +187,7 @@ func step_level(dir: int) -> void:
 func undo() -> void:
 	if busy or history.is_empty():
 		return
+	logged.emit("undo", {"wasWon": won})
 	hp = history.pop_back()
 	won = false
 	_clear_hint()
@@ -177,7 +200,7 @@ func undo() -> void:
 func restart() -> void:
 	if busy:
 		return
-	load_level(index)
+	load_level(index, true)
 
 
 # ---------- play ----------
@@ -188,6 +211,7 @@ func _on_cell_pressed(c: int) -> void:
 	var r = Rules.probe(board, hp, c)
 	if r == null:
 		return # a tile, a wall or tape: nothing to strike
+	logged.emit("strike", {"cell": c, "hits": r.hits.size(), "fizzle": r.hits.size() < 2})
 	if r.hits.size() < 2:
 		view.play_fizzle(c)
 		return
@@ -233,6 +257,7 @@ func _turn_room() -> void:
 	turned = true
 	view.set_dry(true)
 	mood_changed.emit(true)
+	logged.emit("mood", {"lost": true, "moves": history.size() - lost_at})
 
 
 func _calm_room() -> void:
@@ -241,6 +266,7 @@ func _calm_room() -> void:
 	turned = false
 	view.set_dry(false)
 	mood_changed.emit(false)
+	logged.emit("mood", {"lost": false})
 
 
 ## Forget the blunder (undo past it, restart, another painting): calm, and drop its timer.
@@ -261,9 +287,11 @@ func hint() -> void:
 		_note = Strings.t("hint_too_big")
 	elif not a.solvable:
 		_note = Strings.t("hint_lost")
+		logged.emit("hint", {"lost": true})
 	else:
 		hints += 1
 		var first: Dictionary = a.solution[0]
+		logged.emit("hint", {"cell": first.cell})
 		view.set_hint(first.cell)
 		if cursor_active:
 			cursor = first.cell
@@ -282,11 +310,14 @@ func _win() -> void:
 	var ch := data.chapter_of(def)
 	var chapter_was_done := data.chapter_cleared(ch, save)
 	save.record(def.id, strikes)
+	logged.emit("win", {"strikes": strikes, "par": par if par >= 0 else null, "hints": hints})
 	_ov_title.text = Strings.t("restored")
 	_ov_stars.text = stars(strikes, par)
 	_ov_result.text = Strings.t("result", {"s": strikes, "p": par if par >= 0 else "?"}) + (Strings.t("hints", {"n": hints}) if hints > 0 else "")
 	var chapter_just_done: bool = not def.get("extra", false) and not chapter_was_done and data.chapter_cleared(ch, save)
 	_ov_chapter.visible = chapter_just_done
+	if chapter_just_done:
+		logged.emit("chapter_clear", {"chapter": ch.id})
 	_ov_chapter.text = Strings.t("chapter_done", {"n": data.chapter_number(ch), "name": Strings.field(ch, "name")})
 	var extras := data.extras_of(def)
 	_extra_index = data.index_of(extras[0].id) if not extras.is_empty() else -1
@@ -387,8 +418,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		if cursor_active:
 			_on_cell_pressed(cursor)
 		_show_cursor(from_pad)
-	elif _is_cursor_event(event):
-		pass # moves are read every frame in _process (held directions repeat)
+	elif _is_cursor_event(event) and not _overlay.visible:
+		# step at once on the press, so a quick tap (pressed and released within one frame) is never
+		# lost; _process only repeats while the direction is held, and reads the analogue stick
+		var d := Vector2i(
+			int(event.is_action("cursor_right")) - int(event.is_action("cursor_left")),
+			int(event.is_action("cursor_down")) - int(event.is_action("cursor_up")))
+		_dir = d
+		_repeat_at = _clock + Controls.REPEAT_DELAY
+		_step_cursor(d, from_pad)
 	else:
 		handled = false
 	if handled:
@@ -419,17 +457,20 @@ func _process(delta: float) -> void:
 		_dir = d
 		return
 	var step := false
-	if d != _dir:
+	if d != _dir: # a new direction with no press event: the analogue stick
 		step = true
 		_repeat_at = _clock + Controls.REPEAT_DELAY
 	elif _clock >= _repeat_at:
 		step = true
 		_repeat_at = _clock + Controls.REPEAT_EVERY
 	_dir = d
-	if not step:
-		return
-	var from_pad := Input.get_connected_joypads().size() > 0 and not _arrow_keys_down()
-	if _show_cursor(from_pad):
+	if step:
+		_step_cursor(d, Input.get_connected_joypads().size() > 0 and not _arrow_keys_down())
+
+
+## One cursor step (the first one only shows the cursor, where it was).
+func _step_cursor(d: Vector2i, from_pad: bool) -> void:
+	if d == Vector2i.ZERO or _show_cursor(from_pad):
 		return
 	var x := clampi(cursor % board.w + d.x, 0, board.w - 1)
 	var y := clampi(cursor / board.w + d.y, 0, board.h - 1)

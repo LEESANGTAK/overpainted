@@ -40,6 +40,13 @@
 
 ---
 
+## Godot판 (2026-11-26부터)
+
+- 링크: `https://leesangtak.github.io/overpainted/play/` (`?t=이름` 가능). 데모 범위(1~5장)만 들어 있다.
+- 기록은 같은 시트로 간다. 세션 첫 기록에 `engine: "godot"`이 붙어서 프로토타입 기록과 나뉜다. `pull-playtests.mjs`와 `playtest.mjs`는 그대로 쓴다.
+- 이 링크가 열리려면 한 번: 저장소 Settings → Pages → Source를 **GitHub Actions**로 바꾼다 (`.github/workflows/pages.yml`이 프로토타입과 Godot판을 함께 올린다). 바꾼 직후 Actions가 한 번 성공할 때까지 사이트가 비어 있을 수 있으니, 테스트가 없는 시간에 바꾼다.
+- PC·Steam Deck용으로 내보낸 빌드도 같은 시트로 기록한다 (내보내기 설정의 `playtest` 표시).
+
 ## 테스터에게 보내기
 
 - 모두에게 같은 링크: `https://leesangtak.github.io/overpainted/`

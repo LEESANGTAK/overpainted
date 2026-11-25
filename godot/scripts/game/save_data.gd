@@ -12,6 +12,9 @@ var best := {}         ## level id -> fewest strikes it was restored in
 var lang := ""         ## "ko" or "en"; "" = follow the system language on first start
 var sight := true      ## preview the lines of sight under the pointer / cursor
 var sound := true
+var tester := ""       ## playtest builds: the name the tester typed
+var browser := ""      ## playtest builds: an anonymous id for this install
+var welcomed := false  ## playtest builds: the welcome card was answered
 
 
 func path() -> String:
@@ -32,6 +35,10 @@ func load_file() -> void:
 	lang = String(settings.get("lang", ""))
 	sight = bool(settings.get("sight", true))
 	sound = bool(settings.get("sound", true))
+	var who: Dictionary = data.get("tester", {})
+	tester = String(who.get("name", ""))
+	browser = String(who.get("browser", ""))
+	welcomed = bool(who.get("welcomed", false))
 
 
 func save_file() -> void:
@@ -43,6 +50,7 @@ func save_file() -> void:
 		"version": VERSION,
 		"best": best,
 		"settings": {"lang": lang, "sight": sight, "sound": sound},
+		"tester": {"name": tester, "browser": browser, "welcomed": welcomed},
 	}, "  "))
 
 

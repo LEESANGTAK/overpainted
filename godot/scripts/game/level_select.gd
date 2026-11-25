@@ -21,11 +21,13 @@ var save
 var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _title_sub: Label
+var _rec: Label
 var _keys: Label
 var _lang: Button
 var _sight: CheckButton
 var _sound: CheckButton
 var _buttons := {}   ## level index -> Button
+var rec_on := false  ## a playtest build that is recording (shows the REC mark)
 
 
 func setup(level_data: LevelData, save_data) -> void:
@@ -42,6 +44,8 @@ func refresh(focus_index := -1) -> void:
 		child.queue_free()
 	_buttons.clear()
 	_title_sub.text = Strings.t("title_sub")
+	_rec.visible = save.tester != "" and rec_on
+	_rec.text = "%s · %s" % [Strings.t("rec"), save.tester]
 	_keys.text = Strings.t("select_keys")
 	_lang.text = Strings.t("lang_button")
 	_sight.text = Strings.t("sight")
@@ -141,6 +145,9 @@ func _build() -> void:
 	titles.add_child(_label(40, INK, "THE OVERPAINTED"))
 	_title_sub = _label(18, GOLD)
 	titles.add_child(_title_sub)
+	_rec = _label(14, Color("#d9826a"))
+	_rec.visible = false
+	titles.add_child(_rec)
 	var settings := HBoxContainer.new()
 	settings.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	settings.add_theme_constant_override("separation", 12)
