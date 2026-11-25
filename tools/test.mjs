@@ -1,5 +1,6 @@
 // Rules + solver checks.   node tools/test.mjs
 import assert from 'node:assert/strict';
+import { buildGodotData, GODOT_DATA } from './export-godot.mjs';
 import { readFileSync } from 'node:fs';
 import { parseLevel, probe, listMoves, applyHits, isClear, toRows, toUnder, toOrig, canTape, applyTape, tapeLeft, isTaped, isRuined, isWon, isOriginal, paintGone, listToolMoves, applyToolMove, applyRetouch, canRetouch, retouchLeft, applySplit, canSplit, splitLeft, tileOn, maskOf, layersLeft, canPalette, applyPalette, paletteMask, paletteLeft, paletteSources } from '../core/rules.js';
 import { analyze } from '../core/solver.js';
@@ -278,3 +279,10 @@ test('palette: takes paint from the two pigments its cell sees and mixes a dab t
 });
 
 
+test('godot/data/levels.json is up to date (node tools/export-godot.mjs)', () => {
+  const src = JSON.parse(readFileSync(new URL('../levels/prototype.json', import.meta.url), 'utf8'));
+  const shipped = JSON.parse(readFileSync(GODOT_DATA, 'utf8'));
+  assert.deepEqual(shipped, buildGodotData(src), 'run: node tools/export-godot.mjs');
+});
+
+console.log(`\n${n} tests passed`);

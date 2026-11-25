@@ -41,6 +41,8 @@ node tools/test.mjs         # 규칙/솔버 테스트
 | `prototype/audio/` | 생성된 음악 (calm, lost) |
 | `tools/solve.mjs` | 레벨 파일 분석 (`--write`로 par/metrics 기록) |
 | `tools/generate.mjs` | 후보 레벨 생성 (랜덤 → 힐클라이밍) |
+| `tools/export-godot.mjs` | 레벨을 Godot 게임으로 넘긴다 → `godot/data/levels.json` (레벨을 고칠 때마다 실행) |
+| `godot/` | Godot 4.7.2 게임 (이식 중, [docs/godot-port.md](docs/godot-port.md)) |
 | `prototype/` | 플레이 + 에디터 (D: 개발 오버레이, H: 힌트, Z: 언두, R: 재시작) |
 | `levels/prototype.json` | 현재 프로토타입 레벨 12개 |
 

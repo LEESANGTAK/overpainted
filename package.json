@@ -6,6 +6,7 @@
     "serve": "node tools/serve.mjs",
     "solve": "node tools/solve.mjs levels/prototype.json",
     "generate": "node tools/generate.mjs",
-    "test": "node tools/test.mjs"
+    "test": "node tools/test.mjs",
+    "export:godot": "node tools/export-godot.mjs"
   }
 }

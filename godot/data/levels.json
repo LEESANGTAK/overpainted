@@ -1,0 +1,1068 @@
+{
+  "source": "levels/prototype.json (tools/export-godot.mjs; do not edit by hand)",
+  "demo": [
+    "solvent",
+    "shield",
+    "coat",
+    "under",
+    "mix"
+  ],
+  "chapters": [
+    {
+      "id": "solvent",
+      "name": "Solvent",
+      "note": "The rules, and the first ways to lose.",
+      "ko": {
+        "name": "용제",
+        "note": "규칙, 그리고 지는 첫 방법들."
+      }
+    },
+    {
+      "id": "shield",
+      "name": "Shields",
+      "note": "What you clear lets the solvent see further.",
+      "ko": {
+        "name": "방패",
+        "note": "지운 자리 너머로 시선이 길어진다."
+      }
+    },
+    {
+      "id": "coat",
+      "name": "Double Coat",
+      "note": "Some paint takes two matches.",
+      "ko": {
+        "name": "두 겹",
+        "note": "어떤 물감은 두 번 맞춰야 벗겨진다."
+      }
+    },
+    {
+      "id": "under",
+      "name": "Undercoat",
+      "note": "Paint laid over other paint.",
+      "ko": {
+        "name": "밑칠",
+        "note": "물감 위에 칠한 물감."
+      }
+    },
+    {
+      "id": "mix",
+      "name": "Mixed Paint",
+      "note": "One dab, two pigments.",
+      "ko": {
+        "name": "혼색",
+        "note": "한 덩이, 두 안료."
+      }
+    },
+    {
+      "id": "palette",
+      "name": "The Palette",
+      "note": "Mix what the cell sees.",
+      "ko": {
+        "name": "팔레트",
+        "note": "그 칸에서 보이는 색을 섞는다."
+      }
+    },
+    {
+      "id": "tape",
+      "name": "Masking Tape",
+      "note": "A shield the restorer lays down.",
+      "ko": {
+        "name": "테이프",
+        "note": "복원가가 직접 놓는 방패."
+      }
+    },
+    {
+      "id": "orig",
+      "name": "Original Paint",
+      "note": "Some paint is the painting. Leave it.",
+      "ko": {
+        "name": "원본",
+        "note": "어떤 물감은 그림 그 자체다. 그대로 둔다."
+      }
+    },
+    {
+      "id": "together",
+      "name": "All Together",
+      "note": "Everything so far, in small paintings.",
+      "ko": {
+        "name": "종합",
+        "note": "지금까지의 모든 것, 작은 그림으로."
+      }
+    }
+  ],
+  "levels": [
+    {
+      "id": "p-01",
+      "chapter": "solvent",
+      "name": "First Solvent",
+      "note": "Strike an empty spot. Matching pigments in its four lines of sight dissolve.",
+      "rows": [
+        "A...A",
+        ".....",
+        "B...B"
+      ],
+      "par": 2,
+      "ko": {
+        "name": "첫 용제",
+        "note": "빈칸을 두드리세요. 네 방향 시선 끝에 걸린 같은 안료끼리 녹아내립니다."
+      }
+    },
+    {
+      "id": "p-02",
+      "chapter": "solvent",
+      "name": "The Cross",
+      "note": "One strike can lift up to four layers at once.",
+      "rows": [
+        "..A..",
+        ".....",
+        "B...B",
+        ".....",
+        "..A.."
+      ],
+      "par": 1,
+      "ko": {
+        "name": "십자",
+        "note": "한 번의 타격으로 네 겹까지 벗겨낼 수 있습니다."
+      }
+    },
+    {
+      "id": "p-03",
+      "chapter": "solvent",
+      "name": "Fragment 3",
+      "note": "Every painting can be restored. Watch what each strike leaves behind.",
+      "rows": [
+        ".A..A",
+        "A.A.B",
+        ".....",
+        "..BAA"
+      ],
+      "par": 4,
+      "ko": {
+        "name": "조각 3",
+        "note": "모든 그림은 복원할 수 있습니다. 타격할 때마다 무엇이 남는지 살펴보세요."
+      }
+    },
+    {
+      "id": "p-04",
+      "chapter": "solvent",
+      "name": "Fragment 4",
+      "note": "Two pigments. Watch what each strike leaves behind.",
+      "rows": [
+        "..AA.",
+        "B...B",
+        ".BB.A",
+        ".A..."
+      ],
+      "par": 4,
+      "ko": {
+        "name": "조각 4",
+        "note": "두 가지 안료. 타격할 때마다 무엇이 남는지 살펴보세요."
+      }
+    },
+    {
+      "id": "p-05",
+      "chapter": "solvent",
+      "name": "Fragment 5",
+      "note": "Three pigments. Some strikes close doors.",
+      "rows": [
+        "..C.C",
+        "...CC",
+        "..CB.",
+        "CBB.A",
+        ".BA.."
+      ],
+      "par": 6,
+      "ko": {
+        "name": "조각 5",
+        "note": "세 가지 안료. 어떤 타격은 길을 막아버립니다."
+      }
+    },
+    {
+      "id": "p-06",
+      "chapter": "solvent",
+      "name": "Fragment 6",
+      "note": "Three pigments. Some strikes close doors.",
+      "rows": [
+        "AB...",
+        "A..A.",
+        "B...A",
+        "AB.C.",
+        ".C.AA"
+      ],
+      "par": 5,
+      "ko": {
+        "name": "조각 6",
+        "note": "세 가지 안료. 어떤 타격은 길을 막아버립니다."
+      }
+    },
+    {
+      "id": "p-order",
+      "chapter": "shield",
+      "name": "Not Yet",
+      "note": "When the paint sets, the mistake is often earlier than the last strike.",
+      "rows": [
+        ".BBC.",
+        "..B..",
+        ".A.A.",
+        ".BC.C",
+        "....."
+      ],
+      "par": 4,
+      "ko": {
+        "name": "아직 아니야",
+        "note": "물감이 굳었다면, 실수는 대개 마지막 수보다 더 앞에 있습니다."
+      }
+    },
+    {
+      "id": "p-reach",
+      "chapter": "shield",
+      "name": "All the Way",
+      "note": "Clear a layer, and the line of sight runs further.",
+      "rows": [
+        "BC...",
+        ".B...",
+        "..A..",
+        "AC...",
+        "..A.."
+      ],
+      "par": 3,
+      "ko": {
+        "name": "끝까지",
+        "note": "지운 자리 너머로, 시선은 더 멀리 닿습니다."
+      }
+    },
+    {
+      "id": "p-07",
+      "chapter": "shield",
+      "name": "Fragment 7",
+      "note": "Old tape: someone masked this spot long ago. It never comes off, and blocks the solvent.",
+      "rows": [
+        "CB..C.",
+        "....#C",
+        "BA#.A.",
+        "A....A",
+        "#..BC.",
+        "..B.CC"
+      ],
+      "par": 7,
+      "ko": {
+        "name": "조각 7",
+        "note": "오래된 테이프: 누군가 오래전에 이 자리를 가려 두었습니다. 떼어지지 않고, 용제의 시선을 가로막습니다."
+      }
+    },
+    {
+      "id": "p-08",
+      "chapter": "shield",
+      "name": "Fragment 8",
+      "note": "Old tape: someone masked this spot long ago. It never comes off, and blocks the solvent.",
+      "rows": [
+        "#.A.AA",
+        "C.....",
+        ".C.#B.",
+        "B.CBB.",
+        "AB..C#",
+        "...B.."
+      ],
+      "par": 7,
+      "ko": {
+        "name": "조각 8",
+        "note": "오래된 테이프: 누군가 오래전에 이 자리를 가려 두었습니다. 떼어지지 않고, 용제의 시선을 가로막습니다."
+      }
+    },
+    {
+      "id": "p-hold",
+      "chapter": "shield",
+      "name": "All at Once",
+      "note": "Four of one pigment can lift in a single strike.",
+      "rows": [
+        ".CAA.",
+        "AA.A.",
+        "C...C",
+        "CCAA."
+      ],
+      "par": 4,
+      "ko": {
+        "name": "한꺼번에",
+        "note": "같은 색 네 장이 한 번에 녹을 수도 있습니다."
+      }
+    },
+    {
+      "id": "p-twice",
+      "chapter": "coat",
+      "name": "Twice",
+      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "rows": [
+        "aAAA",
+        "....",
+        "...A"
+      ],
+      "par": 3,
+      "ko": {
+        "name": "두 번",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
+      "id": "p-count",
+      "chapter": "coat",
+      "name": "Count the Coats",
+      "note": "Five tiles. Count again.",
+      "rows": [
+        "B...",
+        "..bB",
+        "...B",
+        "..B."
+      ],
+      "par": 3,
+      "ko": {
+        "name": "겹을 세라",
+        "note": "다섯 장. 다시 세어 보세요."
+      }
+    },
+    {
+      "id": "p-coat",
+      "chapter": "coat",
+      "name": "One Coat Left",
+      "note": "It lost a coat. It did not lose its place.",
+      "rows": [
+        "C.BB.",
+        ".CAB.",
+        "..c..",
+        "A.B.."
+      ],
+      "par": 5,
+      "ko": {
+        "name": "한 겹 남았다",
+        "note": "한 겹을 잃었을 뿐, 자리를 잃은 건 아니다."
+      }
+    },
+    {
+      "id": "p-09",
+      "chapter": "coat",
+      "name": "Fragment 9",
+      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "rows": [
+        "..B...",
+        "....C.",
+        "...C.a",
+        ".B.C..",
+        ".C...C",
+        "bbBBAA"
+      ],
+      "par": 7,
+      "ko": {
+        "name": "조각 9",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
+      "id": "p-10",
+      "chapter": "coat",
+      "name": "Fragment 10",
+      "note": "Double coat: it takes two matches. The first only lifts the top coat.",
+      "rows": [
+        ".BC..B",
+        "Ac.C.A",
+        "...CA.",
+        ".ab...",
+        "...C..",
+        "..B.B."
+      ],
+      "par": 8,
+      "extra": true,
+      "parent": "p-09",
+      "ko": {
+        "name": "조각 10",
+        "note": "두 겹 칠: 두 번 맞춰야 벗겨집니다. 첫 매치에는 윗겹만 떨어져 나갑니다."
+      }
+    },
+    {
+      "id": "p-under",
+      "chapter": "under",
+      "name": "Underneath",
+      "note": "Some paint was laid over other paint. The coat beneath shows at the corner.",
+      "rows": [
+        ".AbA.",
+        "....A",
+        "..C.C",
+        "B...."
+      ],
+      "under": [
+        "..A..",
+        ".....",
+        ".....",
+        "....."
+      ],
+      "par": 4,
+      "ko": {
+        "name": "밑칠",
+        "note": "어떤 물감은 다른 물감 위에 칠해졌습니다. 아래 겹의 색은 모서리에 보입니다."
+      }
+    },
+    {
+      "id": "p-onemore",
+      "chapter": "under",
+      "name": "One More Below",
+      "note": "Count what lies beneath. Sometimes it makes three.",
+      "rows": [
+        "AAa.",
+        "...B",
+        "..B.",
+        "...A"
+      ],
+      "under": [
+        "..B.",
+        "....",
+        "....",
+        "...."
+      ],
+      "par": 3,
+      "ko": {
+        "name": "하나 더, 아래에",
+        "note": "아래에 깔린 것까지 세어 보세요. 셋이 될 때도 있습니다."
+      }
+    },
+    {
+      "id": "p-peel",
+      "chapter": "under",
+      "name": "Peel Together",
+      "note": "When a top coat goes, the tile takes the colour beneath.",
+      "rows": [
+        "A.B.A",
+        "..C.c",
+        "..A.B",
+        "..B..",
+        "...Cc"
+      ],
+      "under": [
+        ".....",
+        "....A",
+        ".....",
+        ".....",
+        "....B"
+      ],
+      "par": 6,
+      "ko": {
+        "name": "함께 벗기기",
+        "note": "윗겹이 벗겨지면, 그 자리는 아래 겹의 색이 됩니다."
+      }
+    },
+    {
+      "id": "p-turn",
+      "chapter": "under",
+      "name": "Turncoat",
+      "note": "Peeled paint can change sides.",
+      "rows": [
+        "A....",
+        "..BAa",
+        "..bB.",
+        ".C..A"
+      ],
+      "under": [
+        ".....",
+        "....B",
+        "..C..",
+        "....."
+      ],
+      "par": 5,
+      "ko": {
+        "name": "변절자",
+        "note": "벗겨진 칠은 편을 바꾸기도 합니다."
+      }
+    },
+    {
+      "id": "p-toosoon",
+      "chapter": "under",
+      "name": "Too Soon to Peel",
+      "note": "There is red under the blue. The question is when it shows.",
+      "rows": [
+        "..C..",
+        "...B.",
+        "A...b",
+        ".cACC"
+      ],
+      "under": [
+        ".....",
+        ".....",
+        "....A",
+        ".A..."
+      ],
+      "par": 5,
+      "ko": {
+        "name": "벗기기엔 이르다",
+        "note": "파랑 밑에 빨강이 있습니다. 언제 드러낼지가 문제입니다."
+      }
+    },
+    {
+      "id": "p-mix1",
+      "chapter": "mix",
+      "name": "Both Sides",
+      "note": "Mixed paint: red and blue in one dab. It pairs with either, or with both at once.",
+      "rows": [
+        ".AA.",
+        "..AB",
+        "..A."
+      ],
+      "mix": [
+        "..B.",
+        "....",
+        "...."
+      ],
+      "par": 2,
+      "ko": {
+        "name": "양쪽 다",
+        "note": "혼색: 빨강과 파랑이 한 덩이에. 어느 쪽과도 짝이 됩니다. 둘 다와 한꺼번에도."
+      }
+    },
+    {
+      "id": "p-mix2",
+      "chapter": "mix",
+      "name": "One Too Many",
+      "note": "Two colours in one strike is not always generous.",
+      "rows": [
+        "A...",
+        "..B.",
+        "A..A",
+        "..B."
+      ],
+      "mix": [
+        "....",
+        "....",
+        "B...",
+        "...."
+      ],
+      "par": 2,
+      "ko": {
+        "name": "하나 더 많이",
+        "note": "한 번에 두 색이 늘 넉넉한 건 아닙니다."
+      }
+    },
+    {
+      "id": "p-mix3",
+      "chapter": "mix",
+      "name": "Pick a Side",
+      "note": "A mixed dab goes one way only. Send it where it is needed.",
+      "rows": [
+        "B..A",
+        ".AAA",
+        "B..."
+      ],
+      "mix": [
+        "....",
+        ".B..",
+        "...."
+      ],
+      "par": 3,
+      "ko": {
+        "name": "편 고르기",
+        "note": "혼색은 한쪽으로만 갈 수 있습니다. 필요한 쪽으로 보내세요."
+      }
+    },
+    {
+      "id": "p-mix4",
+      "chapter": "mix",
+      "name": "Two Mixes",
+      "note": "Two mixed dabs. They do not have to choose the same side.",
+      "rows": [
+        ".BB..",
+        "..B.A",
+        "...AA"
+      ],
+      "mix": [
+        ".....",
+        "....B",
+        "....B"
+      ],
+      "par": 3,
+      "ko": {
+        "name": "두 혼색",
+        "note": "혼색이 둘. 같은 편을 고를 필요는 없습니다."
+      }
+    },
+    {
+      "id": "p-mix5",
+      "chapter": "mix",
+      "name": "Not Each Other",
+      "note": "Two mixes, side by side.",
+      "rows": [
+        "....",
+        "AAB.",
+        ".ABB",
+        ".BA."
+      ],
+      "mix": [
+        "....",
+        "....",
+        "....",
+        ".AB."
+      ],
+      "par": 3,
+      "ko": {
+        "name": "서로가 아니다",
+        "note": "혼색 둘이 나란히 있습니다."
+      }
+    },
+    {
+      "id": "p-palette1",
+      "chapter": "palette",
+      "name": "Taken to Mix",
+      "note": "The palette takes paint from the tiles a cell sees and mixes it there. Blue is one too many.",
+      "rows": [
+        "B..",
+        "BA.",
+        "A.B"
+      ],
+      "palette": 1,
+      "par": 3,
+      "ko": {
+        "name": "덜어 와 섞기",
+        "note": "팔레트는 그 칸에서 보이는 타일의 물감을 덜어 와 그 자리에서 섞습니다. 파랑이 하나 남습니다."
+      }
+    },
+    {
+      "id": "p-palette2",
+      "chapter": "palette",
+      "name": "Three Pigments",
+      "note": "Red, blue and ochre. Choose which two to take.",
+      "rows": [
+        "..BC",
+        "A.CB",
+        "...A"
+      ],
+      "palette": 1,
+      "par": 3,
+      "ko": {
+        "name": "세 가지 물감",
+        "note": "빨강, 파랑, 황토. 어느 두 색을 덜어 올지 고르세요."
+      }
+    },
+    {
+      "id": "p-palette3",
+      "chapter": "palette",
+      "name": "Strike First",
+      "note": "Every place you can mix right now is wrong.",
+      "rows": [
+        "AA..",
+        "A.B.",
+        "..BB"
+      ],
+      "palette": 1,
+      "par": 3,
+      "ko": {
+        "name": "먼저 치고 섞기",
+        "note": "지금 섞을 수 있는 자리는 모두 틀렸습니다."
+      }
+    },
+    {
+      "id": "p-palette4",
+      "chapter": "palette",
+      "name": "From the Top Coat",
+      "note": "A double coat gives only its top coat. The coat underneath stays, and still needs a partner.",
+      "rows": [
+        "A..B",
+        "aA.B",
+        "...B"
+      ],
+      "palette": 1,
+      "par": 4,
+      "ko": {
+        "name": "위 겹을 덜어",
+        "note": "두 겹에서는 위 겹만 덜어 옵니다. 아래 겹은 남아서 짝을 찾습니다."
+      }
+    },
+    {
+      "id": "p-mask",
+      "chapter": "tape",
+      "name": "Masking",
+      "note": "Tape an empty spot and the solvent cannot see past it. Taping is a move too.",
+      "rows": [
+        "..BB",
+        "B..B",
+        "...."
+      ],
+      "tape": 1,
+      "par": 3,
+      "ko": {
+        "name": "가리기",
+        "note": "빈칸에 테이프를 붙이면 용제의 시선이 그 너머로 가지 않습니다. 테이프를 붙이는 것도 한 수입니다."
+      }
+    },
+    {
+      "id": "p-after",
+      "chapter": "tape",
+      "name": "Not First",
+      "note": "Tape does not always go on first.",
+      "rows": [
+        "AAB.",
+        "AB.A",
+        "...."
+      ],
+      "tape": 1,
+      "par": 4,
+      "ko": {
+        "name": "먼저가 아니다",
+        "note": "테이프가 늘 먼저인 것은 아닙니다."
+      }
+    },
+    {
+      "id": "p-inplace",
+      "chapter": "tape",
+      "name": "In Its Place",
+      "note": "Some shields have to go. Their place does not have to open.",
+      "rows": [
+        "..BB",
+        ".ACB",
+        "..A.",
+        "C.B."
+      ],
+      "tape": 1,
+      "par": 5,
+      "ko": {
+        "name": "그 자리에",
+        "note": "어떤 방패는 치워야 합니다. 그 자리까지 열어 둘 필요는 없습니다."
+      }
+    },
+    {
+      "id": "p-waitcoat",
+      "chapter": "tape",
+      "name": "Wait for the Coat",
+      "note": "Tape blocks every look, even the ones you still need.",
+      "rows": [
+        "...CB",
+        "..A.A",
+        ".B..C",
+        "..aCC"
+      ],
+      "tape": 1,
+      "par": 6,
+      "ko": {
+        "name": "두 겹을 기다려",
+        "note": "테이프는 모든 시선을 막습니다. 아직 필요한 시선까지도."
+      }
+    },
+    {
+      "id": "p-orig1",
+      "chapter": "orig",
+      "name": "Not Yours to Lift",
+      "note": "The dull, cracked dab is the painting itself. Lift the overpaint around it, never the original.",
+      "rows": [
+        "A.A",
+        "..A",
+        "AAA"
+      ],
+      "orig": [
+        "...",
+        "..o",
+        "..."
+      ],
+      "par": 2,
+      "ko": {
+        "name": "손대지 말 것",
+        "note": "칙칙하고 금이 간 물감은 그림 그 자체입니다. 둘레의 덧칠만 벗기고, 원본은 남기세요."
+      }
+    },
+    {
+      "id": "p-orig2",
+      "chapter": "orig",
+      "name": "Out of Its Sight",
+      "note": "The original looks along its row and column too. Pair the overpaint where it cannot see.",
+      "rows": [
+        "BBB.",
+        "A...",
+        "BA.A",
+        "B.AB"
+      ],
+      "orig": [
+        "o...",
+        "....",
+        "....",
+        "...o"
+      ],
+      "par": 3,
+      "ko": {
+        "name": "원본의 눈 밖에서",
+        "note": "원본도 가로세로로 봅니다. 원본의 눈이 닿지 않는 곳에서 짝을 지으세요."
+      }
+    },
+    {
+      "id": "p-orig3",
+      "chapter": "orig",
+      "name": "Seven and One",
+      "note": "Seven reds to lift, and one red that stays. Every line it can see is closed to you.",
+      "rows": [
+        "A.A.",
+        "..AA",
+        "..AA",
+        "A.A."
+      ],
+      "orig": [
+        "....",
+        "...o",
+        "....",
+        "...."
+      ],
+      "par": 3,
+      "ko": {
+        "name": "일곱과 하나",
+        "note": "벗길 빨강이 일곱, 남을 빨강이 하나. 그 하나가 보는 줄은 모두 닫혀 있습니다."
+      }
+    },
+    {
+      "id": "p-orig4",
+      "chapter": "orig",
+      "name": "The Red You Can't Borrow",
+      "note": "The palette takes from original paint too, and that ruins the painting. One red is overpaint; the other is the painting's.",
+      "rows": [
+        "...B",
+        "A.BA",
+        ".B.B",
+        "..B."
+      ],
+      "orig": [
+        "....",
+        "o...",
+        "....",
+        "...."
+      ],
+      "palette": 1,
+      "par": 3,
+      "ko": {
+        "name": "빌릴 수 없는 빨강",
+        "note": "팔레트는 원본에서도 물감을 덜어 옵니다. 그러면 그림이 망가집니다. 빨강 하나는 덧칠, 하나는 그림의 것입니다."
+      }
+    },
+    {
+      "id": "p-orig5",
+      "chapter": "orig",
+      "name": "Close Its Eyes",
+      "note": "Two blues meet right below the original.",
+      "rows": [
+        ".BA.",
+        "..BA",
+        "B.BB",
+        "..A."
+      ],
+      "orig": [
+        ".o..",
+        "....",
+        "....",
+        "...."
+      ],
+      "tape": 1,
+      "par": 4,
+      "ko": {
+        "name": "원본의 눈을 가리고",
+        "note": "파랑 둘이 원본 바로 아래에서 만납니다."
+      }
+    },
+    {
+      "id": "p-chain",
+      "chapter": "together",
+      "name": "Chain",
+      "note": "Clear one thing, and the next way opens.",
+      "rows": [
+        "B.C..",
+        ".B...",
+        "AC..A",
+        "B..A.",
+        "C.C.."
+      ],
+      "par": 4,
+      "ko": {
+        "name": "사슬",
+        "note": "하나를 치우면, 다음 길이 열립니다."
+      }
+    },
+    {
+      "id": "p-hiding",
+      "chapter": "together",
+      "name": "One Is Hiding",
+      "note": "Not every red is on top.",
+      "rows": [
+        ".A.B",
+        "a..A",
+        ".A..",
+        ".Bc."
+      ],
+      "under": [
+        "....",
+        "C...",
+        "....",
+        "..A."
+      ],
+      "tape": 1,
+      "par": 5,
+      "ko": {
+        "name": "하나는 숨어 있다",
+        "note": "모든 빨강이 위에 있는 건 아닙니다."
+      }
+    },
+    {
+      "id": "p-sameside",
+      "chapter": "together",
+      "name": "Same Side",
+      "note": "Two mixes again. The double coat decides the side.",
+      "rows": [
+        "..BA",
+        "...A",
+        "BA..",
+        "..Bb"
+      ],
+      "mix": [
+        "....",
+        "...B",
+        "....",
+        "..A."
+      ],
+      "par": 4,
+      "ko": {
+        "name": "같은 편",
+        "note": "다시 혼색이 둘. 어느 편인지는 두 겹이 정합니다."
+      }
+    },
+    {
+      "id": "p-guard",
+      "chapter": "together",
+      "name": "The Mix Stands Guard",
+      "note": "A mix in front of the original.",
+      "rows": [
+        "A.B.",
+        ".BBB",
+        "A...",
+        "AB.."
+      ],
+      "mix": [
+        "....",
+        "..A.",
+        "....",
+        ".A.."
+      ],
+      "orig": [
+        "....",
+        "...o",
+        "....",
+        "...."
+      ],
+      "par": 3,
+      "ko": {
+        "name": "혼색이 지키는 것",
+        "note": "원본 앞의 혼색."
+      }
+    },
+    {
+      "id": "p-third",
+      "chapter": "together",
+      "name": "The Third Beneath",
+      "note": "Peel in the right order.",
+      "rows": [
+        "...B.",
+        ".A...",
+        ".cA.C",
+        ".CA..",
+        "A..bC"
+      ],
+      "under": [
+        ".....",
+        ".....",
+        ".B...",
+        ".....",
+        "...A."
+      ],
+      "par": 5,
+      "ko": {
+        "name": "세 번째는 아래에",
+        "note": "벗기는 데에도 순서가 있습니다."
+      }
+    },
+    {
+      "id": "p-beside",
+      "chapter": "together",
+      "name": "Beside the Original",
+      "note": "Two coats of red, right beside a red that stays.",
+      "rows": [
+        "...Ba",
+        "....A",
+        "A.B.B",
+        "..BB."
+      ],
+      "orig": [
+        ".....",
+        "....o",
+        ".....",
+        "....."
+      ],
+      "palette": 1,
+      "par": 4,
+      "ko": {
+        "name": "원본 곁에서",
+        "note": "두 겹 빨강, 그 바로 곁에 남아야 할 빨강."
+      }
+    },
+    {
+      "id": "p-redshare",
+      "chapter": "together",
+      "name": "Save One for Red",
+      "note": "One red, and two dabs that could be red.",
+      "rows": [
+        "BA..",
+        "B...",
+        "BB.A",
+        "ABB."
+      ],
+      "mix": [
+        ".B..",
+        "....",
+        "...B",
+        "...."
+      ],
+      "tape": 1,
+      "par": 5,
+      "ko": {
+        "name": "빨강 몫",
+        "note": "빨강은 하나, 빨강이 될 수 있는 덩이는 둘."
+      }
+    },
+    {
+      "id": "p-11",
+      "chapter": "together",
+      "name": "Large Canvas I",
+      "note": "Everything together.",
+      "rows": [
+        ".AB#.A.",
+        "..CC.A.",
+        "Cb.aB.D",
+        "#......",
+        ".DDABD.",
+        "C.B...."
+      ],
+      "par": 10,
+      "extra": true,
+      "parent": "p-redshare",
+      "ko": {
+        "name": "큰 화폭 I",
+        "note": "지금까지의 모든 것."
+      }
+    },
+    {
+      "id": "p-12",
+      "chapter": "together",
+      "name": "Large Canvas II",
+      "note": "Everything together.",
+      "rows": [
+        "..Cd#A.",
+        "A.....A",
+        "BC.....",
+        "....C#A",
+        "DCADD.B",
+        "cDA...."
+      ],
+      "par": 10,
+      "extra": true,
+      "parent": "p-11",
+      "ko": {
+        "name": "큰 화폭 II",
+        "note": "지금까지의 모든 것."
+      }
+    }
+  ]
+}

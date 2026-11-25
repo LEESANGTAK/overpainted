@@ -10,7 +10,7 @@
 
 | 항목 | 제안 | 이유 |
 |---|---|---|
-| 버전 | Godot 4의 최신 안정판. 시작할 때 버전을 고정하고, 데모까지 올리지 않는다. | 중간에 엔진 버전이 바뀌면 원인 모를 차이가 생긴다. |
+| 버전 | **Godot 4.7.2** (2026-11-26 고정, 디자이너). 데모까지 올리지 않는다. 지금 PC의 4.7.2는 Steam판이라 자동 업데이트를 꺼 두어야 한다. | 중간에 엔진 버전이 바뀌면 원인 모를 차이가 생긴다. |
 | 언어 | **GDScript** | 지금까지 Godot 4에서는 C# 프로젝트를 웹으로 내보낼 수 없다 (시작할 때 다시 확인). 테스트 링크(웹)를 계속 쓰려면 GDScript여야 한다. 규칙 코드가 작아서(규칙 약 500줄, 풀이기 약 230줄) 속도 걱정도 없다. |
 | 저장소 | 같은 저장소의 `godot/` 폴더 | 레벨 JSON과 규칙 테스트를 한곳에서 맞춘다. |
 | 기준 화면 | 1280×800 (16:10, Steam Deck) | 가장 중요한 기기에 맞추고, 16:9 PC와 웹은 여백으로 맞춘다. |
@@ -52,6 +52,9 @@
 - 레벨 파일을 넘기는 스크립트: `tools/export-godot.mjs`가 `levels/prototype.json`에서 게임에 필요한 것만 `godot/data/levels.json`으로 옮긴다 (난이도 수치는 뺀다).
 - 한글 글꼴을 넣는다. Godot 기본 글꼴에는 한글이 없다. 무료로 넣을 수 있는 글꼴(예: Noto Sans KR, Pretendard)을 고르고 라이선스를 확인한다.
 - **끝:** 빈 화면이 웹과 PC에서 뜨고, 한글이 보인다.
+- **끝냄 (2026-11-26):** `godot/` 프로젝트(4.7.2, Compatibility 렌더러, 1280×800), `tools/export-godot.mjs` → `godot/data/levels.json` (9장 48판, 데모 5장 메인 25판, `npm test`가 최신인지 확인), Noto Sans KR(굵기 400). 4.7.2 내보내기 템플릿을 설치하고(공식 SHA512 확인) `godot/export_presets.cfg`에 웹(스레드 없음)·Windows·Linux를 두었다. 웹 빌드는 브라우저에서, Windows 빌드는 실행해서 한글과 레벨 수가 뜨는 것을 확인했다. 크기: 웹 46MB(wasm 39MB + pck 6.8MB), Windows 116MB, Linux 80MB.
+- **남은 것:** Linux 빌드를 Steam Deck에서 실행해 보기 (이 PC에서는 못 돌림), 글꼴 OFL.txt 넣기, 웹용 글꼴 줄이기(출시 전).
+- 내보내기: `godot --headless --path godot --export-release Web` (또는 `Windows`, `Linux`). 결과는 `godot/build/` (git에 올리지 않음, `.gdignore`로 Godot도 읽지 않음).
 
 ### 1. 규칙 이식과 맞춰 보기 (M)
 - `rules.gd`: 판 읽기, 시선(probe), 타격, 두 겹·밑칠·혼색·원본, 테이프, 팔레트(덜어 오기 포함), 이김·짐 판정.

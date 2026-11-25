@@ -1,0 +1,6 @@
+# Godot 4 cache and imports
+.godot/
+/android/
+# export output (build/.gdignore keeps Godot from importing what it exported)
+/build/*
+!/build/.gdignore
