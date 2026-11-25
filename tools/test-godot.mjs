@@ -1,6 +1,6 @@
 // Godot tests: rules parity (the JS answers from tools/parity.mjs, checked by the port), every level
-// without tools played to the end through the real play screen, and the demo played with the gamepad
-// only and with touch only.
+// without tools played to the end through the real play screen, the demo played with the gamepad only
+// and with touch only, the game's frame (list, saves, settings, demo build) and the room's mood and hints.
 //   node tools/test-godot.mjs [quick]     ("quick" skips the solver checks and the play-throughs)
 // Godot: $GODOT if set, else the Steam install of Godot 4.7.2 on Windows.
 import { spawnSync } from 'node:child_process';
@@ -19,5 +19,5 @@ const quick = process.argv.includes('quick');
 if (quick) args.push('--', 'quick');
 if (run(godot, args) !== 0) process.exit(1);
 if (quick) process.exit(0);
-for (const test of ['play_test', 'input_test', 'frame_test'])
+for (const test of ['play_test', 'input_test', 'frame_test', 'mood_test'])
   if (run(godot, ['--headless', '--path', 'godot', '--script', `res://tests/${test}.gd`]) !== 0) process.exit(1);

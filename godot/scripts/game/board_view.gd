@@ -17,6 +17,25 @@ const FRAME := Color("#8a6538")
 const RAY := Color("#f4e9c8")
 const OLD_TAPE := Color("#8f887a")
 const MAX_CELL := 104.0
+const DRY_IN := 7.0     ## seconds for the canvas to dry dull once the room turns
+const DRY_OUT := 3.0    ## and to come back
+
+## The drying: the prototype's CSS filter (saturate .3, brightness .74, contrast .9, sepia .18) as a
+## canvas shader, scaled by `dry` (0..1).
+const DRY_SHADER := """
+shader_type canvas_item;
+uniform float dry : hint_range(0.0, 1.0) = 0.0;
+void fragment() {
+	vec3 c = COLOR.rgb;
+	float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+	c = mix(c, vec3(l), 0.7 * dry);
+	vec3 sepia = vec3(dot(c, vec3(0.393, 0.769, 0.189)), dot(c, vec3(0.349, 0.686, 0.168)), dot(c, vec3(0.272, 0.534, 0.131)));
+	c = mix(c, sepia, 0.18 * dry);
+	c = (c - 0.5) * (1.0 - 0.1 * dry) + 0.5;
+	c *= 1.0 - 0.26 * dry;
+	COLOR.rgb = c;
+}
+"""
 
 var board: Rules.Board
 var hp: PackedByteArray
@@ -32,6 +51,9 @@ var _lift := 0.0          ## 0..1 progress of that lift
 var _strike_cell := -1    ## where the strike came from (its lines stay drawn during the lift)
 var _fizzle_cell := -1
 var _fizzle := 0.0        ## 1 -> 0 flash on a strike that lifts nothing
+var _hint := -1           ## cell the hint points at
+var _dry := 0.0
+var _dry_tween: Tween
 
 
 func show_state(b: Rules.Board, state: PackedByteArray) -> void:
@@ -44,6 +66,44 @@ func show_state(b: Rules.Board, state: PackedByteArray) -> void:
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	resized.connect(_layout)
+	var shader := Shader.new()
+	shader.code = DRY_SHADER
+	material = ShaderMaterial.new()
+	material.shader = shader
+
+
+## Dry the canvas dull (true) or let it come back (false), slowly.
+func set_dry(on: bool) -> void:
+	if _dry_tween:
+		_dry_tween.kill()
+	_dry_tween = create_tween()
+	_dry_tween.tween_method(_set_dry_amount, _dry, 1.0 if on else 0.0, DRY_IN if on else DRY_OUT)
+
+
+## Jump straight to dry or fresh (a new painting).
+func reset_dry() -> void:
+	if _dry_tween:
+		_dry_tween.kill()
+	_set_dry_amount(0.0)
+
+
+func _set_dry_amount(v: float) -> void:
+	_dry = v
+	material.set_shader_parameter("dry", v)
+
+
+func dry_amount() -> float:
+	return _dry
+
+
+func set_hint(c: int) -> void:
+	_hint = c
+	queue_redraw()
+
+
+func _process(_delta: float) -> void:
+	if _hint >= 0:
+		queue_redraw() # the hint ring pulses
 
 
 func _layout() -> void:
@@ -136,6 +196,9 @@ func _draw() -> void:
 		if t >= 0:
 			_draw_tile(c, t)
 	_draw_sight()
+	if _hint >= 0 and board != null:
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU / 1.2)
+		draw_arc(center_of(_hint), _cell * (0.3 + 0.08 * pulse), 0, TAU, 48, Color("#ffd27a", 0.5 + 0.4 * pulse), 3.0, true)
 	if cursor >= 0:
 		var r := Rect2(_origin + Vector2(cursor % board.w, cursor / board.w) * _cell, Vector2(_cell, _cell)).grow(-3)
 		draw_rect(r, Color(RAY, 0.9 if interactive else 0.35), false, 3.0)

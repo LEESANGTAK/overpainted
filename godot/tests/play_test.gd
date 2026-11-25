@@ -73,6 +73,9 @@ func _run() -> void:
 	if play.hp != before or play.history.size() != 0:
 		_fail("a fizzle changed the state")
 	print("%d levels played to the end, %d failures" % [played, _failures])
+	game.queue_free() # free the game (and its music) before quitting, so nothing is left at exit
+	await process_frame
+	await process_frame
 	quit(1 if _failures > 0 else 0)
 
 

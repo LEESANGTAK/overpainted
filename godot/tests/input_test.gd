@@ -149,4 +149,7 @@ func _run() -> void:
 		tap_levels += 1
 
 	print("gamepad: %d paintings in a row · touch: %d paintings · %d failures" % [pad_levels, tap_levels, _failures])
+	game.queue_free() # free the game (and its music) before quitting, so nothing is left at exit
+	await process_frame
+	await process_frame
 	quit(1 if _failures > 0 else 0)

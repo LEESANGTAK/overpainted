@@ -141,4 +141,7 @@ func _run() -> void:
 	Strings.lang = was
 	DirAccess.remove_absolute(save_file)
 	print("frame: %d failures (demo: %d chapters, %d paintings)" % [_failures, demo.chapters.size(), demo.levels.size()])
+	game.queue_free() # free the game (and its music) before quitting, so nothing is left at exit
+	await process_frame
+	await process_frame
 	quit(1 if _failures > 0 else 0)

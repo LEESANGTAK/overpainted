@@ -1,18 +1,32 @@
 extends Control
-## Grey-box play screen (port stages 2-4): one painting at a time — strike, undo, restart, win, stars.
+## Grey-box play screen (port stages 2-5): one painting at a time — strike, undo, restart, win, stars,
+## hints, and the quiet turn of the room when an attempt has gone wrong.
 ## The screen is built in code; art and staging come later. game.gd owns it and the list of paintings.
 ## Input: mouse, touch (taps arrive as clicks), keyboard and gamepad (a cursor on the board; see
-## scripts/input/controls.gd). Not here yet: masking tape and palette controls (not in the demo
-## chapters), sound.
+## scripts/input/controls.gd). Not here yet: masking tape and palette controls (not in the demo chapters).
+##
+## The room's mood (the prototype's noteBlunder / turnRoom): after each move the solver checks whether the
+## painting can still be restored; the move that makes it impossible is the blunder. The room does not
+## turn on that move (that would make every move a free test): only TURN_MOVES moves later, after
+## turn_seconds, or at a dead end. Then the music turns (mood_changed) and the canvas dries dull. Undoing
+## back past the blunder, restarting or winning calms it again.
 
 signal back_requested   ## the player wants the list of paintings
 signal level_opened     ## a painting was opened (from the result card, LB/RB, ...)
+signal mood_changed(lost: bool)   ## the room turns (true) or comes back (false)
+signal sound_toggled    ## the player pressed the sound key
 
 const Rules := preload("res://scripts/core/rules.gd")
 const LevelData := preload("res://scripts/game/level_data.gd")
 const BoardView := preload("res://scripts/game/board_view.gd")
 const Strings := preload("res://scripts/ui/strings.gd")
 const Controls := preload("res://scripts/input/controls.gd")
+const Solver := preload("res://scripts/core/solver.gd")
+
+const TURN_MOVES := 2        ## the room turns this many moves after the blunder...
+## ...or this long after it, or at a dead end (a variable so tests can shorten it)
+var turn_seconds := 25.0
+const SOLVER_LIMIT := 300_000
 
 const BG := Color("#1b170f")
 const INK := Color("#f4e9c8")
@@ -29,6 +43,11 @@ var hp: PackedByteArray
 var history: Array[PackedByteArray] = []
 var won := false
 var busy := false           ## a strike is playing
+var lost_at := 0            ## moves made when the attempt became impossible (0: still possible)
+var turned := false         ## the room has turned
+var hints := 0              ## hints asked for in this attempt
+var _attempt := 0           ## bumped whenever the blunder is forgotten (stale timers check it)
+var _note := ""             ## a line under the board (a hint's message) until the next move
 
 ## Keyboard / gamepad cursor. Shown once a key or pad button is used, hidden again by the mouse or a touch.
 var cursor_active := false
@@ -107,6 +126,10 @@ func load_level(i: int) -> void:
 	history.clear()
 	won = false
 	busy = false
+	hints = 0
+	_clear_hint()
+	_forget_all()
+	view.reset_dry()
 	_hide_overlay()
 	# keep the cursor's column and row where they fit, else start in the middle
 	var cx := mini(cursor % maxi(1, _cursor_w), board.w - 1) if _cursor_w > 0 else board.w / 2
@@ -144,6 +167,9 @@ func undo() -> void:
 		return
 	hp = history.pop_back()
 	won = false
+	_clear_hint()
+	if lost_at > 0 and history.size() < lost_at:
+		_forget_all() # the blunder is no longer on the board
 	_hide_overlay()
 	_refresh()
 
@@ -174,9 +200,79 @@ func _on_cell_pressed(c: int) -> void:
 	history.append(hp)
 	hp = Rules.apply_hits(hp, r.hits)
 	busy = false
+	_clear_hint()
 	if Rules.is_won(board, hp):
+		_calm_room()
 		_win()
+	else:
+		_note_blunder()
+		if lost_at > 0 and history.size() - lost_at >= TURN_MOVES:
+			_turn_room()
 	_refresh()
+
+
+# ---------- the room's mood ----------
+
+## After a move: if this attempt was still winnable and no longer is, this move was the blunder.
+func _note_blunder() -> void:
+	if lost_at > 0:
+		return
+	var a := Solver.analyze(board, hp, SOLVER_LIMIT)
+	if a.too_big or a.solvable:
+		return
+	lost_at = history.size()
+	var attempt := _attempt
+	get_tree().create_timer(turn_seconds).timeout.connect(func():
+		if attempt == _attempt and is_inside_tree():
+			_turn_room())
+
+
+func _turn_room() -> void:
+	if lost_at == 0 or turned or won:
+		return
+	turned = true
+	view.set_dry(true)
+	mood_changed.emit(true)
+
+
+func _calm_room() -> void:
+	if not turned:
+		return
+	turned = false
+	view.set_dry(false)
+	mood_changed.emit(false)
+
+
+## Forget the blunder (undo past it, restart, another painting): calm, and drop its timer.
+func _forget_all() -> void:
+	lost_at = 0
+	_attempt += 1
+	_calm_room()
+
+
+# ---------- hints ----------
+
+## Mark the first move of a shortest line from here (H / Y). Counts in the result.
+func hint() -> void:
+	if busy or won or board == null:
+		return
+	var a := Solver.analyze(board, hp, SOLVER_LIMIT)
+	if a.too_big:
+		_note = Strings.t("hint_too_big")
+	elif not a.solvable:
+		_note = Strings.t("hint_lost")
+	else:
+		hints += 1
+		var first: Dictionary = a.solution[0]
+		view.set_hint(first.cell)
+		if cursor_active:
+			cursor = first.cell
+	_refresh()
+
+
+func _clear_hint() -> void:
+	view.set_hint(-1)
+	_note = ""
 
 
 func _win() -> void:
@@ -188,7 +284,7 @@ func _win() -> void:
 	save.record(def.id, strikes)
 	_ov_title.text = Strings.t("restored")
 	_ov_stars.text = stars(strikes, par)
-	_ov_result.text = Strings.t("result", {"s": strikes, "p": par if par >= 0 else "?"})
+	_ov_result.text = Strings.t("result", {"s": strikes, "p": par if par >= 0 else "?"}) + (Strings.t("hints", {"n": hints}) if hints > 0 else "")
 	var chapter_just_done: bool = not def.get("extra", false) and not chapter_was_done and data.chapter_cleared(ch, save)
 	_ov_chapter.visible = chapter_just_done
 	_ov_chapter.text = Strings.t("chapter_done", {"n": data.chapter_number(ch), "name": Strings.field(ch, "name")})
@@ -223,13 +319,20 @@ func _refresh() -> void:
 		Strings.t("strikes"), history.size(),
 		Strings.t("par"), str(int(def.par)) if def.has("par") else "–",
 		Strings.t("layers_left"), Rules.layers_left(board, hp)]
-	_status.text = ""
+	_status.text = _note
 	if won:
 		return
+	var stuck := false
 	if Rules.is_ruined(board, hp):
 		_status.text = Strings.t("ruined")
+		stuck = true
 	elif not Rules.is_clear(hp, board.n_paint) and Rules.list_moves(board, hp).is_empty() and not _tool_can_make_a_strike():
 		_status.text = Strings.t("dead_end")
+		stuck = true
+	if stuck: # nothing more to do here but undo: the room turns now
+		if lost_at == 0:
+			lost_at = maxi(1, history.size())
+		_turn_room()
 
 
 ## A palette dab can open a strike; tape never does (the prototype's dead-end rule).
@@ -274,6 +377,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		step_level(1)
 	elif event.is_action("menu"):
 		back_requested.emit()
+	elif event.is_action("hint"):
+		if from_pad:
+			_show_cursor(true)
+		hint()
+	elif event.is_action("sound"):
+		sound_toggled.emit()
 	elif event.is_action("strike") and not _overlay.visible:
 		if cursor_active:
 			_on_cell_pressed(cursor)
