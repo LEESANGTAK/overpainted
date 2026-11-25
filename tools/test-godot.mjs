@@ -1,5 +1,6 @@
-// Rules parity: write the JS answers (tools/parity.mjs), then let the Godot port check them.
-//   node tools/test-godot.mjs [quick]     ("quick" skips the solver checks)
+// Godot tests: rules parity (the JS answers from tools/parity.mjs, checked by the port), then every
+// level without tools played to the end through the real play screen.
+//   node tools/test-godot.mjs [quick]     ("quick" skips the solver checks and the play-through)
 // Godot: $GODOT if set, else the Steam install of Godot 4.7.2 on Windows.
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -13,5 +14,7 @@ const run = (cmd, args) => spawnSync(cmd, args, { cwd: root, stdio: 'inherit' })
 if (run(process.execPath, [join(root, 'tools/parity.mjs')]) !== 0) process.exit(1);
 run(godot, ['--headless', '--path', 'godot', '--import']); // pick up new or moved scripts
 const args = ['--headless', '--path', 'godot', '--script', 'res://tests/run_tests.gd'];
-if (process.argv.includes('quick')) args.push('--', 'quick');
-process.exit(run(godot, args) ?? 1);
+const quick = process.argv.includes('quick');
+if (quick) args.push('--', 'quick');
+if (run(godot, args) !== 0) process.exit(1);
+if (!quick && run(godot, ['--headless', '--path', 'godot', '--script', 'res://tests/play_test.gd']) !== 0) process.exit(1);
