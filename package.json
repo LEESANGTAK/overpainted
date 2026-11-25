@@ -7,6 +7,7 @@
     "solve": "node tools/solve.mjs levels/prototype.json",
     "generate": "node tools/generate.mjs",
     "test": "node tools/test.mjs",
-    "export:godot": "node tools/export-godot.mjs"
+    "export:godot": "node tools/export-godot.mjs",
+    "test:godot": "node tools/test-godot.mjs"
   }
 }
