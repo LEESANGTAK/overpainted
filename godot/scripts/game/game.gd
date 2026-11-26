@@ -11,12 +11,14 @@ const Strings := preload("res://scripts/ui/strings.gd")
 const Music := preload("res://scripts/audio/music.gd")
 const Playlog := preload("res://scripts/net/playlog.gd")
 const Welcome := preload("res://scripts/game/welcome.gd")
+const Sfx := preload("res://scripts/audio/sfx.gd")
 
 var data: LevelData
 var save: SaveData
 var play: Play
 var select: LevelSelect
 var music: Music
+var sfx: Sfx
 var playlog: Playlog
 var _pad_logged := false
 
@@ -42,6 +44,9 @@ func _ready() -> void:
 	music = Music.new()
 	add_child(music)
 	music.set_muted(not save.sound)
+	sfx = Sfx.new()
+	add_child(sfx)
+	sfx.set_muted(not save.sound)
 	play = Play.new()
 	add_child(play)
 	select = LevelSelect.new()
@@ -56,6 +61,7 @@ func _ready() -> void:
 	select.level_chosen.connect(open_level)
 	select.settings_changed.connect(_on_settings_changed)
 	play.mood_changed.connect(music.set_lost)
+	play.sound.connect(sfx.play)
 	play.logged.connect(_on_logged)
 	select.rec_on = playlog.enabled
 	Input.joy_connection_changed.connect(func(device, connected):
@@ -119,6 +125,7 @@ func _on_logged(type: String, event: Dictionary) -> void:
 
 
 func open_level(i: int) -> void:
+	sfx.play("tick")
 	play.load_level(i) # (emits level_opened -> _show_play)
 
 
@@ -138,5 +145,6 @@ func show_list() -> void:
 func _on_settings_changed() -> void:
 	save.save_file()
 	music.set_muted(not save.sound)
+	sfx.set_muted(not save.sound)
 	play.apply_language()
 	select.refresh(-2) # (-2: no level to focus; the settings button keeps it)

@@ -15,6 +15,7 @@ signal back_requested   ## the player wants the list of paintings
 signal level_opened     ## a painting was opened (from the result card, LB/RB, ...)
 signal mood_changed(lost: bool)   ## the room turns (true) or comes back (false)
 signal sound_toggled    ## the player pressed the sound key
+signal sound(name: String, pitch: float)  ## a sound effect (sfx.gd) for what just happened
 signal logged(type: String, data: Dictionary)   ## a playtest event (game.gd hands it to playlog.gd)
 
 const Rules := preload("res://scripts/core/rules.gd")
@@ -188,6 +189,7 @@ func undo() -> void:
 	if busy or history.is_empty():
 		return
 	logged.emit("undo", {"wasWon": won})
+	sound.emit("undo", 1.0)
 	hp = history.pop_back()
 	won = false
 	_clear_hint()
@@ -200,6 +202,8 @@ func undo() -> void:
 func restart() -> void:
 	if busy:
 		return
+	if not history.is_empty():
+		sound.emit("restart", 1.0)
 	load_level(index, true)
 
 
@@ -214,7 +218,9 @@ func _on_cell_pressed(c: int) -> void:
 	logged.emit("strike", {"cell": c, "hits": r.hits.size(), "fizzle": r.hits.size() < 2})
 	if r.hits.size() < 2:
 		view.play_fizzle(c)
+		sound.emit("fizzle", 1.0)
 		return
+	sound.emit(_lift_sound(r.hits), 1.0 + 0.04 * (r.hits.size() - 2)) # more paint at once, a little higher
 	busy = true
 	view.interactive = false
 	var level_now := index
@@ -225,6 +231,8 @@ func _on_cell_pressed(c: int) -> void:
 	hp = Rules.apply_hits(hp, r.hits)
 	busy = false
 	_clear_hint()
+	if Rules.is_ruined(board, hp) and not Rules.is_ruined(board, history.back()):
+		sound.emit("ruin", 1.0)
 	if Rules.is_won(board, hp):
 		_calm_room()
 		_win()
@@ -233,6 +241,19 @@ func _on_cell_pressed(c: int) -> void:
 		if lost_at > 0 and history.size() - lost_at >= TURN_MOVES:
 			_turn_room()
 	_refresh()
+
+
+## The sound of a strike: a top coat taken with a coat left (it tells the player something stayed),
+## else a mixed tile lifted, else paint lifted.
+func _lift_sound(hits: Array) -> String:
+	var mixed := false
+	for t in hits:
+		if Rules.is_added(board, t):
+			continue
+		if hp[t] >= 2:
+			return "peel"
+		mixed = mixed or Rules.is_mixed(board, t)
+	return "lift_mix" if mixed else "lift"
 
 
 # ---------- the room's mood ----------
@@ -311,6 +332,7 @@ func _win() -> void:
 	var chapter_was_done := data.chapter_cleared(ch, save)
 	save.record(def.id, strikes)
 	logged.emit("win", {"strikes": strikes, "par": par if par >= 0 else null, "hints": hints})
+	sound.emit("win", 1.0)
 	_ov_title.text = Strings.t("restored")
 	_ov_stars.text = stars(strikes, par)
 	_ov_result.text = Strings.t("result", {"s": strikes, "p": par if par >= 0 else "?"}) + (Strings.t("hints", {"n": hints}) if hints > 0 else "")

@@ -3,7 +3,9 @@ extends SceneTree
 ##   - a blunder does not turn the room; TURN_MOVES moves later it does (music lost, canvas drying)
 ##   - undo back past the blunder calms it; the timer turns it too; a dead end turns it at once
 ##   - a hint marks the first move of a shortest line, counts in the result, says so when lost
-##   - M toggles the sound (saved, the music bus muted)
+##   - sound effects: a strike, a miss, a top coat, a mixed tile, undo, restart and a win each ask for
+##     their sound, and every sound asked for exists (sfx.gd)
+##   - M toggles the sound (saved, the music and effects buses muted)
 ##   godot --headless --path godot --script res://tests/mood_test.gd
 
 const Solver := preload("res://scripts/core/solver.gd")
@@ -73,6 +75,8 @@ func _run() -> void:
 	await _frames(3)
 	play = game.play
 	var music: Node = game.music
+	var heard: Array[String] = []
+	play.sound.connect(func(n: String, _pitch: float): heard.append(n))
 
 	# ---- the room turns late, and calms when the blunder is undone ----
 	var found := _find_blunder(play.TURN_MOVES)
@@ -146,6 +150,38 @@ func _run() -> void:
 		play.hint()
 		_check(play.hints == 0 and play._status.text != "", "a hint on a lost attempt did not say so")
 
+	# ---- sound effects ----
+	_check(heard.has("win") and heard.has("lift"), "a strike and a win made no sound: %s" % [heard])
+	for level_id in ["p-twice", "p-mix1"]:
+		var li: int = play.data.index_of(level_id)
+		_check(li >= 0, "no level %s" % level_id)
+		if li < 0:
+			continue
+		game.open_level(li)
+		heard.clear()
+		for m in Solver.analyze(play.board).solution:
+			await _strike(m.cell)
+		var want := "peel" if level_id == "p-twice" else "lift_mix"
+		_check(heard.has(want), "%s made no %s sound: %s" % [level_id, want, heard])
+	game.open_level(0)
+	heard.clear()
+	var miss := -1
+	for c in play.board.w * play.board.h:
+		var r = Rules.probe(play.board, play.hp, c)
+		if r != null and r.hits.size() < 2:
+			miss = c
+			break
+	if miss >= 0:
+		await _strike(miss)
+	await _strike(Solver.analyze(play.board).solution[0].cell)
+	play.undo()
+	await _strike(Solver.analyze(play.board).solution[0].cell)
+	play.restart()
+	for n in ["fizzle", "undo", "restart"]:
+		_check(n in heard, "no %s sound: %s" % [n, heard])
+	for n in heard + ["tick", "ruin", "tape_on", "tape_off", "palette"]:
+		_check(game.sfx.has(n), "sound %s is asked for but not made" % n)
+
 	# ---- the sound key ----
 	var was_on: bool = game.save.sound
 	var e := InputEventKey.new()
@@ -157,6 +193,8 @@ func _run() -> void:
 	_check(game.save.sound != was_on and music.muted == was_on, "M did not toggle the sound")
 	var bus := AudioServer.get_bus_index("Music")
 	_check(bus >= 0 and AudioServer.is_bus_mute(bus) == was_on, "the music bus mute does not follow the setting")
+	var sfx_bus := AudioServer.get_bus_index("Sfx")
+	_check(sfx_bus >= 0 and AudioServer.is_bus_mute(sfx_bus) == was_on, "the effects bus mute does not follow the setting")
 
 	DirAccess.remove_absolute(save_file)
 	print("mood: %d failures" % _failures)
