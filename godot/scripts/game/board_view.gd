@@ -233,13 +233,26 @@ func _draw_tile_now(at: Vector2, radius: float, t: int, alpha: float) -> void:
 		_draw_disc(at, radius * 0.82, PIGMENTS[ks[0]], ks[1] if ks.size() > 1 else -1, false, alpha)
 		return
 	if hp[t] >= 2:
-		# two coats: the lower coat shows as a ring, the top coat inside, a light rim for the varnish
-		draw_circle(at, radius, Color(PIGMENTS[board.under_color[t]], alpha))
-		draw_circle(at, radius * 0.74, Color(PIGMENTS[board.tile_color[t]], alpha))
-		draw_arc(at, radius, 0, TAU, 48, Color(1, 0.97, 0.88, 0.55 * alpha), maxf(2.0, _cell * 0.035), true)
+		# two coats, as in the prototype (style.css .tile.under / .varnish): a dab laid on a wider dab.
+		# The coat beneath is darkened when it is the same paint, so a same-paint double coat is never
+		# missed; another pigment beneath keeps its own colour. The top dab casts a small shadow.
+		var under := PIGMENTS[board.under_color[t]]
+		if board.under_color[t] == board.tile_color[t]:
+			under = _under_shade(under)
+		draw_circle(at, radius, Color(under, alpha))
+		var top := radius * 0.62
+		draw_circle(at + Vector2(0, maxf(1.5, _cell * 0.02)), top * 1.04, Color(0, 0, 0, 0.35 * alpha))
+		draw_circle(at, top, Color(PIGMENTS[board.tile_color[t]], alpha))
 		return
 	var second := board.mix_color[t]
 	_draw_disc(at, radius, PIGMENTS[board.under_color[t]], second, Rules.is_original(board, t), alpha)
+
+
+## The prototype's same-paint undercoat: CSS brightness(.68) saturate(.9).
+static func _under_shade(c: Color) -> Color:
+	var d := Color(c.r * 0.68, c.g * 0.68, c.b * 0.68, c.a)
+	var grey := d.get_luminance()
+	return Color(lerpf(grey, d.r, 0.9), lerpf(grey, d.g, 0.9), lerpf(grey, d.b, 0.9), c.a)
 
 
 ## A disc of `color`, split with `second` if it is a mix; original paint is dulled and cracked.
