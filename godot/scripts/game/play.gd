@@ -562,6 +562,10 @@ func _build() -> void:
 	footer.add_child(_restart)
 	_keys = _label(13, MUTED)
 	col.add_child(_keys)
+	# a phone (scaled-up small screen): the keyboard line only takes room from the board
+	var fit_keys := func(): _keys.visible = get_window().content_scale_factor <= 1.0
+	fit_keys.call()
+	get_tree().root.size_changed.connect(fit_keys)
 
 	_overlay = Control.new()
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -593,9 +597,10 @@ func _build() -> void:
 	for l in [_ov_title, _ov_stars, _ov_result, _ov_chapter]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lines.add_child(l)
-	var buttons := HBoxContainer.new()
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 12)
+	var buttons := HFlowContainer.new() # (wraps on a phone held upright)
+	buttons.alignment = FlowContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("h_separation", 12)
+	buttons.add_theme_constant_override("v_separation", 12)
 	lines.add_child(buttons)
 	_ov_retry = _button("", restart)
 	_ov_extra = _button("", func(): load_level(_extra_index))

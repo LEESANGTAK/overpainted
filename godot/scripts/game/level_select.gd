@@ -61,6 +61,7 @@ func refresh(focus_index := -1) -> void:
 		head.add_child(_label(16, GOLD if done == mains.size() else MUTED, "%d/%d" % [done, mains.size()]))
 		var note := _label(15, MUTED, Strings.field(ch, "note"))
 		note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART # (a phone held upright)
 		head.add_child(note)
 		_list.add_child(head)
 		var row := HFlowContainer.new()
@@ -137,7 +138,8 @@ func _build() -> void:
 	col.add_theme_constant_override("separation", 16)
 	margin.add_child(col)
 
-	var header := HBoxContainer.new()
+	var header := HFlowContainer.new() # the settings drop under the title on a narrow screen
+	header.add_theme_constant_override("v_separation", 8)
 	col.add_child(header)
 	var titles := VBoxContainer.new()
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -180,3 +182,6 @@ func _build() -> void:
 	_scroll.add_child(_list)
 	_keys = _label(13, MUTED)
 	col.add_child(_keys)
+	var fit_keys := func(): _keys.visible = get_window().content_scale_factor <= 1.0
+	fit_keys.call()
+	get_tree().root.size_changed.connect(fit_keys)

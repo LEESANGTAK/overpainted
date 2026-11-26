@@ -20,9 +20,17 @@ var music: Music
 var playlog: Playlog
 var _pad_logged := false
 
+## Web on a phone: the 1280x800 layout shrunk to fit a phone screen came out a third of its size. The
+## content is scaled up so one design pixel is never under this many CSS pixels (desktop browsers and
+## builds are big enough already). The containers then lay out in the smaller logical space.
+const MIN_CSS_PER_PX := 0.8
+
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if OS.has_feature("web"):
+		_fit_small_screen()
+		get_tree().root.size_changed.connect(_fit_small_screen)
 	save = SaveData.new()
 	save.load_file()
 	Strings.lang = save.lang if save.lang in ["ko", "en"] else Strings.system_lang()
@@ -93,6 +101,16 @@ func _start_session() -> void:
 		playlog.add("tester", {"tester": name})
 		w.queue_free()
 		select.refresh(-1))
+
+
+func _fit_small_screen() -> void:
+	var css := Vector2(float(JavaScriptBridge.eval("window.innerWidth", true)), float(JavaScriptBridge.eval("window.innerHeight", true)))
+	if css.x <= 0 or css.y <= 0:
+		return
+	var base := minf(css.x / 1280.0, css.y / 800.0)
+	var factor := snappedf(maxf(1.0, MIN_CSS_PER_PX / base), 0.01)
+	if not is_equal_approx(get_window().content_scale_factor, factor):
+		get_window().content_scale_factor = factor
 
 
 func _on_logged(type: String, event: Dictionary) -> void:
