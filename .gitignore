@@ -11,3 +11,6 @@ Thumbs.db
 # collector read key (docs/playtest-setup.md)
 playtests/collector.json
 playtests/archive-*/
+
+# sound-effect candidates from tools/sfx.mjs (they cost credits: keep the folder, pick in tools/sfx-pick.html)
+audio-candidates/

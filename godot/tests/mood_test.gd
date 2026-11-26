@@ -4,7 +4,7 @@ extends SceneTree
 ##   - undo back past the blunder calms it; the timer turns it too; a dead end turns it at once
 ##   - a hint marks the first move of a shortest line, counts in the result, says so when lost
 ##   - sound effects: a strike, a miss, a top coat, a mixed tile, undo, restart and a win each ask for
-##     their sound, and every sound asked for exists (sfx.gd)
+##     their sound, every sound asked for exists (sfx.gd), and a picked recording is used when there
 ##   - M toggles the sound (saved, the music and effects buses muted)
 ##   godot --headless --path godot --script res://tests/mood_test.gd
 
@@ -181,6 +181,9 @@ func _run() -> void:
 		_check(n in heard, "no %s sound: %s" % [n, heard])
 	for n in heard + ["tick", "ruin", "tape_on", "tape_off", "palette"]:
 		_check(game.sfx.has(n), "sound %s is asked for but not made" % n)
+		# a picked recording (tools/sfx-pick.html) replaces the synthesized sound
+		var recorded := ResourceLoader.exists("res://audio/sfx/%s_1.wav" % n)
+		_check(game.sfx.source(n) == ("recorded" if recorded else "synth"), "sound %s: %s, file there: %s" % [n, game.sfx.source(n), recorded])
 
 	# ---- the sound key ----
 	var was_on: bool = game.save.sound

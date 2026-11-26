@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>효과음 고르기</title>
+<!-- Listen to the candidates from tools/sfx.mjs and pick up to three per sound. What you hear is what
+     is saved: each candidate is trimmed (silence before and after), faded, levelled to the same peak and
+     scaled by the sound's slider, then written as godot/audio/sfx/<name>_<k>.wav by tools/serve.mjs.
+     "In the game's mix" plays the calm music at the game's level and the effect at the effects bus level. -->
+<style>
+  :root { --bg:#1b170f; --card:#2a241b; --ink:#f4e9c8; --muted:#9a8f7f; --gold:#b8915c; --line:#3d3426; --ok:#7fae8a; --bad:#d9826a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, "Noto Sans KR", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; }
+  .bar { display:flex; flex-wrap:wrap; gap:16px; align-items:center; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-bottom:20px; position:sticky; top:8px; z-index:1; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .card h2 { font-size:18px; margin:0; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  .card h2 code { color:var(--gold); font-size:14px; }
+  .prompt { color:var(--muted); font-size:13px; margin:4px 0 12px; }
+  .row { display:flex; gap:10px; align-items:center; padding:6px 0; border-top:1px solid var(--line); flex-wrap:wrap; }
+  .row .name { color:var(--muted); font-size:13px; flex:1; min-width:140px; overflow-wrap:anywhere; }
+  .row.picked .name { color:var(--ink); }
+  button { background:#3a3122; color:var(--ink); border:1px solid var(--gold); border-radius:6px; padding:6px 12px; font:inherit; cursor:pointer; }
+  button:hover { background:#4a3e2b; }
+  button.primary { background:var(--gold); color:#1b170f; font-weight:600; }
+  button:disabled { opacity:.45; cursor:default; }
+  label { display:inline-flex; gap:6px; align-items:center; cursor:pointer; }
+  input[type=range] { width:140px; accent-color: var(--gold); }
+  .tools { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  .status { font-size:13px; color:var(--muted); }
+  .status.ok { color:var(--ok); } .status.bad { color:var(--bad); }
+  .empty { color:var(--muted); font-size:13px; padding:6px 0; }
+  .meter { font-variant-numeric: tabular-nums; color:var(--muted); font-size:12px; min-width:60px; }
+  .current { font-size:13px; color:var(--muted); margin-top:8px; }
+  .saved { font-size:12px; color:var(--ok); border:1px solid var(--ok); border-radius:4px; padding:0 6px; }
+  code.cmd { background:#120f0a; padding:2px 6px; border-radius:4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>효과음 고르기</h1>
+  <p class="lead">소리마다 마음에 드는 후보를 최대 3개까지 고르고 저장하세요. 게임은 저장한 것 중 하나를 무작위로 틉니다(같은 소리가 덜 반복됨).
+    고르지 않은 소리는 지금의 합성음을 그대로 씁니다. 후보 만들기: <code class="cmd">node tools/sfx.mjs</code></p>
+  <div class="bar">
+    <label><input type="checkbox" id="withMusic"> 게임처럼 음악과 함께 듣기</label>
+    <span class="status" id="global"></span>
+  </div>
+  <div id="list"></div>
+</main>
+<script>
+const MUSIC_GAIN = 0.42;            // scripts/audio/music.gd VOLUME (calm piece)
+const SFX_BUS_DB = -10;             // scripts/audio/sfx.gd VOLUME_DB
+const PEAK = 0.89;                  // every pick is levelled to this peak (-1 dBFS) before its slider
+let ctx, music;
+// per sound: the boxes ticked and the slider, kept across reloads of the list (saving one sound
+// must not clear what is ticked on the others); starts from what is saved
+const state = {};
+
+function audio() {
+  if (!ctx) ctx = new AudioContext();
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+const db = x => Math.pow(10, x / 20);
+
+// Decode, mix to mono, trim the silence around the sound, fade the ends, level the peak.
+async function processed(url, gainDb) {
+  const ac = audio();
+  const raw = await ac.decodeAudioData(await (await fetch(url, { cache: 'no-store' })).arrayBuffer());
+  const n = raw.length, rate = raw.sampleRate, mono = new Float32Array(n);
+  for (let c = 0; c < raw.numberOfChannels; c++) { const d = raw.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / raw.numberOfChannels; }
+  let peak = 0; for (const v of mono) peak = Math.max(peak, Math.abs(v));
+  if (peak === 0) return { buf: null, seconds: 0 };
+  const thr = peak * db(-40);
+  let a = 0, b = n - 1;
+  while (a < n && Math.abs(mono[a]) < thr) a++;
+  while (b > a && Math.abs(mono[b]) < thr) b--;
+  a = Math.max(0, a - Math.round(0.005 * rate));
+  b = Math.min(n - 1, b + Math.round(0.04 * rate));
+  const out = mono.slice(a, b + 1);
+  const fin = Math.min(out.length, Math.round(0.003 * rate)), fout = Math.min(out.length, Math.round(0.03 * rate));
+  for (let i = 0; i < fin; i++) out[i] *= i / fin;
+  for (let i = 0; i < fout; i++) out[out.length - 1 - i] *= i / fout;
+  const k = PEAK / peak * db(gainDb);
+  for (let i = 0; i < out.length; i++) out[i] = Math.max(-1, Math.min(1, out[i] * k));
+  const buf = ac.createBuffer(1, out.length, rate);
+  buf.copyToChannel(out, 0);
+  return { buf, seconds: out.length / rate };
+}
+
+function play(buf) {
+  const ac = audio();
+  const src = ac.createBufferSource(), g = ac.createGain();
+  src.buffer = buf;
+  g.gain.value = document.getElementById('withMusic').checked ? db(SFX_BUS_DB) : 1;
+  src.connect(g).connect(ac.destination);
+  src.start();
+}
+
+document.getElementById('withMusic').addEventListener('change', e => {
+  if (!music) { music = new Audio('/godot/audio/calm.mp3'); music.loop = true; music.volume = MUSIC_GAIN; }
+  e.target.checked ? music.play() : music.pause();
+});
+
+function wav(buf) {
+  const d = buf.getChannelData(0), rate = buf.sampleRate, out = new DataView(new ArrayBuffer(44 + d.length * 2));
+  const s = (o, t) => [...t].forEach((ch, i) => out.setUint8(o + i, ch.charCodeAt(0)));
+  s(0, 'RIFF'); out.setUint32(4, 36 + d.length * 2, true); s(8, 'WAVE'); s(12, 'fmt ');
+  out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+  out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
+  s(36, 'data'); out.setUint32(40, d.length * 2, true);
+  for (let i = 0; i < d.length; i++) out.setInt16(44 + i * 2, Math.round(d[i] * 32767), true);
+  let bin = ''; const bytes = new Uint8Array(out.buffer);
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k === 'class' ? e.className = v : k.startsWith('on') ? e.addEventListener(k.slice(2), v) : e.setAttribute(k, v);
+  for (const k of kids) e.append(k);
+  return e;
+}
+
+async function load() {
+  const { sounds, maxPicks } = await (await fetch('/api/sfx', { cache: 'no-store' })).json();
+  const list = document.getElementById('list');
+  list.replaceChildren();
+  let total = 0;
+  for (const [name, s] of Object.entries(sounds)) {
+    total += s.candidates.length;
+    const st = state[name] ??= { checked: new Set(s.pickedFrom), gain: s.pickedGain, msg: '', ok: true };
+    const gain = el('input', { type: 'range', min: -12, max: 6, step: 1, value: st.gain });
+    const gainLabel = el('span', { class: 'meter' });
+    const showGain = () => gainLabel.textContent = `${gain.value > 0 ? '+' : ''}${gain.value} dB`;
+    showGain();
+    gain.addEventListener('input', () => { st.gain = +gain.value; showGain(); changed(); });
+    const status = el('span', { class: 'status' + (st.msg ? (st.ok ? ' ok' : ' bad') : '') }, st.msg);
+    const boxes = [];
+    const card = el('section', { class: 'card' },
+      el('h2', {}, s.ko, el('code', {}, name)),
+      el('div', { class: 'prompt' }, s.text));
+    if (!s.candidates.length) card.append(el('div', { class: 'empty' }, `아직 후보가 없습니다. node tools/sfx.mjs ${name}`));
+    for (const c of s.candidates) {
+      const box = el('input', { type: 'checkbox' });
+      box.checked = st.checked.has(c.file);
+      const len = el('span', { class: 'meter' });
+      const row = el('div', { class: 'row' },
+        el('button', { onclick: async () => { const p = await processed(c.url, +gain.value); len.textContent = p.seconds.toFixed(2) + ' s'; if (p.buf) play(p.buf); } }, '▶ 듣기'),
+        el('label', {}, box, '사용'), len, el('span', { class: 'name' }, c.file));
+      if (s.pickedFrom.includes(c.file)) row.append(el('span', { class: 'saved' }, '저장됨'));
+      row.classList.toggle('picked', box.checked);
+      box.addEventListener('change', () => {
+        if (box.checked && st.checked.size >= maxPicks) { box.checked = false; status.className = 'status bad'; status.textContent = `최대 ${maxPicks}개까지 고를 수 있습니다`; return; }
+        box.checked ? st.checked.add(c.file) : st.checked.delete(c.file);
+        row.classList.toggle('picked', box.checked);
+        changed();
+      });
+      boxes.push({ box, c });
+      card.append(row);
+    }
+    const save = el('button', { class: 'primary', onclick: async () => {
+      const chosen = boxes.filter(b => b.box.checked);
+      if (!chosen.length) { status.className = 'status bad'; status.textContent = '고른 후보가 없습니다'; return; }
+      await send(name, chosen, +gain.value, status);
+    } }, '고른 것 저장');
+    const unsaved = () => st.gain !== s.pickedGain || st.checked.size !== s.pickedFrom.length || s.pickedFrom.some(f => !st.checked.has(f));
+    // a change after saving: say so (the old "saved" note would mislead)
+    function changed() {
+      st.msg = unsaved() ? '저장하지 않은 변경이 있습니다' : '';
+      st.ok = true;
+      status.className = 'status'; status.textContent = st.msg;
+    }
+    const reset = el('button', { onclick: async () => {
+      if (!confirm(`${s.ko}: 저장한 효과음을 지우고 합성음으로 되돌릴까요?`)) return;
+      await send(name, [], 0, status);
+    } }, '합성음으로 되돌리기');
+    if (!s.candidates.length) save.disabled = true;
+    card.append(el('div', { class: 'tools' }, el('span', {}, '크기'), gain, gainLabel, save, reset, status));
+    const cur = el('div', { class: 'current' });
+    if (s.picked.length) {
+      cur.append(`지금 게임에서 쓰는 것: ${s.picked.length}개 `);
+      // the saved file as it is (already trimmed and levelled; processing it again would undo the slider)
+      s.picked.forEach((u, i) => cur.append(el('button', { onclick: async () => {
+        const ac = audio();
+        play(await ac.decodeAudioData(await (await fetch(u, { cache: 'no-store' })).arrayBuffer()));
+      } }, `▶ ${i + 1}`), ' '));
+    } else cur.append('지금 게임에서 쓰는 것: 합성음 (게임 안에서 들어 보세요)');
+    card.append(cur);
+    list.append(card);
+  }
+  document.getElementById('global').textContent = `후보 ${total}개`;
+}
+
+async function send(name, chosen, gainDb, status) {
+  status.className = 'status'; status.textContent = '저장하는 중…';
+  try {
+    const wavs = [];
+    for (const { c } of chosen) wavs.push(wav((await processed(c.url, gainDb)).buf));
+    const from = chosen.map(({ c }) => c.file);
+    const res = await fetch('/api/sfx-pick', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, wavs, from, gainDb }) });
+    if (!res.ok) throw new Error(await res.text());
+    const st = state[name];
+    st.checked = new Set(from);
+    st.gain = from.length ? gainDb : 0;
+    st.msg = from.length ? `${from.length}개 저장했습니다` : '합성음으로 되돌렸습니다';
+    st.ok = true;
+    const y = scrollY;
+    await load();
+    scrollTo(0, y); // stay where you were
+  } catch (e) {
+    status.className = 'status bad'; status.textContent = '저장하지 못했습니다: ' + e.message;
+  }
+}
+
+load().catch(e => document.getElementById('list').textContent = '불러오지 못했습니다 (node tools/serve.mjs 로 열었나요?): ' + e.message);
+</script>
+</body>
+</html>

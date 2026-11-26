@@ -13,14 +13,19 @@ extends Node
 ##   win       painting restored (a D major arpeggio of soft bells)
 ##   tick      a painting opened from the list
 ##   tape_on, tape_off, palette   for the tape and palette tools (not in the Godot game yet)
+##
+## Recorded sounds replace a placeholder when they are there: res://audio/sfx/<name>_<k>.wav (k = 1..3,
+## made with tools/sfx.mjs and picked in tools/sfx-pick.html); one of them plays at random each time.
 
 const RATE := 22050
 const BUS := "Sfx"
 const VOLUME_DB := -10.0  ## a strike peaked at -5 dB at -6, over music peaking at -20 (2026-11-26)
 const VOICES := 6
+const MAX_RECORDED := 3
 
 var muted := false
-var _streams := {}          ## name -> AudioStreamWAV
+var _streams := {}          ## name -> AudioStreamWAV (synthesized)
+var _recorded := {}         ## name -> [AudioStream] picked files, used instead of the synthesized one
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
 var _made_bus := false
@@ -44,6 +49,14 @@ func _ready() -> void:
 		add_child(p)
 		_players.append(p)
 	_build_all()
+	for sound in _streams:
+		var files: Array[AudioStream] = []
+		for k in range(1, MAX_RECORDED + 1):
+			var path := "res://audio/sfx/%s_%d.wav" % [sound, k]
+			if ResourceLoader.exists(path):
+				files.append(load(path))
+		if not files.is_empty():
+			_recorded[sound] = files
 
 
 func _exit_tree() -> void:
@@ -64,13 +77,22 @@ func has(sound: String) -> bool:
 	return _streams.has(sound)
 
 
+## "recorded" when picked files are used for this sound, else "synth".
+func source(sound: String) -> String:
+	return "recorded" if _recorded.has(sound) else "synth"
+
+
 ## Play a sound; `pitch` > 1 is higher. A little random pitch keeps repeats from sounding mechanical.
 func play(sound: String, pitch := 1.0) -> void:
 	if not _streams.has(sound) or DisplayServer.get_name() == "headless":
 		return
 	var p := _players[_next]
 	_next = (_next + 1) % _players.size()
-	p.stream = _streams[sound]
+	if _recorded.has(sound):
+		var files: Array = _recorded[sound]
+		p.stream = files[_rng.randi() % files.size()]
+	else:
+		p.stream = _streams[sound]
 	p.pitch_scale = pitch * _rng.randf_range(0.97, 1.03)
 	p.play()
 
