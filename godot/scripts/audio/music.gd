@@ -52,6 +52,10 @@ func _ready() -> void:
 			p.stream = stream
 			p.bus = BUS
 			p.volume_db = -80.0
+			# Mixed by Godot, as on the desktop. The web build (no threads) would otherwise play it as a
+			# Web Audio "sample": there the bus made above got no volume (silent music, found 2026-11-26)
+			# and the low-pass filter of a room gone wrong does not run at all.
+			p.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 			add_child(p)
 			pair.append(p)
 		_players[k] = pair
